@@ -308,6 +308,103 @@ cdef _extract_no_sum(const char* filename, MAXINDEX_t filesize, DTYPE_t low_rang
 
     return np.copy(widths, order='C')
 
+@boundscheck(False) # Deactivate bounds checking
+@wraparound(False)  # Deactivate negative indexing
+@cdivision(True) # Ignore modulo/divide by zero warning
+cdef INT_t[:] _extract_spectra(const char* filename, MAXINDEX_t filesize,
+                                    const DTYPE_t[:] low_range, const DTYPE_t[:] high_range,
+                                    const SMALL_t[:] calc_intensity, int timeout):
+    
+    cdef DTYPE_t num_x, num_y, num_trig, num_frames, desc_len, trig, num_pulses, pulse, time
+    cdef DTYPE_t intensity
+    cdef SMALL_t width
+    cdef MAXINDEX_t data_start, pix, curr_file_size
+    cdef int idx
+    cdef int n = 0
+    #cdef int capacity = 5000
+    
+    # 10MB buffer
+    cdef MAXINDEX_t BUFFER_SIZE = 10 * 1024 * 1024
+    cdef char* file_buffer = <char*> malloc(BUFFER_SIZE * sizeof(char))
+    cdef MAXINDEX_t buffer_idx = 0
+
+    # open file
+    cdef FILE* fp
+    cdef int timer = 0
+    while True:
+        fp = fopen(filename, "rb")
+        if fp != NULL:
+            timer = 0
+            break
+        elif timer > timeout and timeout >= 0:
+            raise FileNotFoundError('Timer exceeded timeout of ' + str(timeout) +' seconds')
+        timer += 1
+        usleep(1)
+
+    fseek(fp, 0, SEEK_END)
+    curr_file_size = ftell(fp)
+    fseek(fp, 0, SEEK_SET)
+
+    # note, if cython has packed structs, this would be easier
+    # or even macros tbh
+    fseek(fp, 0x6, SEEK_SET)
+    fread(&num_x, sizeof(DTYPE_t), 1, fp)
+    fread(&num_y, sizeof(DTYPE_t), 1, fp)
+    fread(&num_trig, sizeof(DTYPE_t), 1, fp)
+    fread(&num_frames, sizeof(DTYPE_t), 1, fp)
+    fseek(fp, 0x2, SEEK_CUR)
+    fread(&desc_len, sizeof(DTYPE_t), 1, fp)
+
+    data_start = \
+        <MAXINDEX_t>(num_x) * <MAXINDEX_t>(num_y) * <MAXINDEX_t>(num_frames) * 8 + desc_len + 0x12
+    
+    cdef int capacity =   num_x * num_y * 250 * 350
+    arr = \
+        cvarray(
+            shape=((capacity,)),
+            itemsize=sizeof(INT_t),
+            format='I'
+        )    
+    cdef INT_t[:] arr_time = arr
+    cdef INT_t[:] arr_amp = arr
+    
+    fseek(fp, data_start, SEEK_SET)
+    fread(file_buffer, sizeof(char), BUFFER_SIZE, fp)
+    for pix in range(<MAXINDEX_t>(num_x) * <MAXINDEX_t>(num_y)):
+        #if pix % num_x == 0:
+        #    print('\rpix done: ' + str(100 * pix / num_x / num_y) + '%...', end='')
+        for trig in range(num_trig):
+            _check_buffer_refill(fp, file_buffer, &buffer_idx, 0x8 * sizeof(char), BUFFER_SIZE,
+                                 timeout, &curr_file_size, filesize)
+            memcpy(&num_pulses, file_buffer + buffer_idx + 0x6, sizeof(time))
+            buffer_idx += 0x8
+            for pulse in range(num_pulses):
+                _check_buffer_refill(fp, file_buffer, &buffer_idx, 0x5 * sizeof(char), BUFFER_SIZE,
+                                     timeout, &curr_file_size, filesize)
+                memcpy(&time, file_buffer + buffer_idx, sizeof(time))
+                memcpy(&width, file_buffer + buffer_idx + 0x2, sizeof(width))
+                memcpy(&intensity, file_buffer + buffer_idx + 0x3, sizeof(intensity))
+                buffer_idx += 0x5
+                
+                arr_time[n] = time
+                n += 1
+                
+        
+    arr = \
+        cvarray(
+            shape=((n + 1,)),
+            itemsize=sizeof(INT_t),
+            format='I'
+        )    
+    cdef INT_t[:] arr_final = arr
+    arr_final = arr_time[0 : n + 1]
+
+                        
+    fclose(fp)
+    free(file_buffer)
+    
+    #return np.vstack((np.asarray(arr_time),np.asarray(arr_amp)))
+    return np.asarray(arr_final)
 
 def c_extract_bin(char* filename, MAXINDEX_t filesize, DTYPE_t[:] low_range,
                   DTYPE_t[:] high_range, SMALL_t[:] calc_intensity, int timeout=100):
@@ -320,4 +417,10 @@ def c_extract_no_sum(char* filename, MAXINDEX_t filesize, DTYPE_t low_range,
                      DTYPE_t high_range, int timeout=100):
     return np.asarray(
         _extract_no_sum(filename, filesize, low_range, high_range, timeout)
+    )
+
+def c_extract_spectra(char* filename, MAXINDEX_t filesize, DTYPE_t[:] low_range,
+                  DTYPE_t[:] high_range, SMALL_t[:] calc_intensity, int timeout=100):
+    return np.asarray(
+        _extract_spectra(filename, filesize, low_range, high_range, calc_intensity, timeout)
     )
