@@ -355,9 +355,9 @@ def get_histograms_per_tof(data_dir: str, fov: str, channel: str, mass_range=(-0
     return widths, intensities, pulses
 
 
-def median_height_vs_mean_pp(data_dir: str, fov: str, channel: str,
-                             panel: Union[Tuple[float, float], pd.DataFrame] = (-0.3, 0.0),
-                             time_res: float = 500e-6):
+def get_median_pulse_height(data_dir: str, fov: str, channel: str,
+                            panel: Union[Tuple[float, float], pd.DataFrame] = (-0.3, 0.0),
+                            time_res: float = 500e-6):
     """Retrieves median pulse intensity and mean pulse count for a given channel
 
     Args:
@@ -379,12 +379,6 @@ def median_height_vs_mean_pp(data_dir: str, fov: str, channel: str,
 
     local_bin_file = os.path.join(data_dir, fov['bin'])
 
-    # TODO: fix median calculation in this call
-    _, mean_pp = \
-        _extract_bin.c_pulse_height_vs_positive_pixel(bytes(local_bin_file, 'utf-8'),
-                                                      fov['lower_tof_range'][0],
-                                                      fov['upper_tof_range'][0])
-
     _, intensities, _ = \
         _extract_bin.c_extract_histograms(bytes(local_bin_file, 'utf-8'),
                                           fov['lower_tof_range'][0],
@@ -393,7 +387,7 @@ def median_height_vs_mean_pp(data_dir: str, fov: str, channel: str,
     int_bin = np.cumsum(intensities) / intensities.sum()
     median_height = (np.abs(int_bin - 0.5)).argmin()
 
-    return median_height, mean_pp
+    return median_height
 
 
 def get_total_counts(data_dir: str, include_fovs: Union[List[str], None] = None):

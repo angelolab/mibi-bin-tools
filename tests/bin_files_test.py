@@ -219,7 +219,7 @@ def test_get_width_histogram(test_dir, fov, panel):
 @parametrize_with_cases('test_dir, fov', cases=FovMetadataTestFiles)
 @parametrize_with_cases('panel', cases=FovMetadataTestPanels, has_tag='specified')
 def test_median_height_vs_mean_pp(test_dir, fov, panel):
-    bin_files.median_height_vs_mean_pp(
+    bin_files.get_median_pulse_height(
         test_dir,
         fov['json'].split('.')[0],
         'SMA',
