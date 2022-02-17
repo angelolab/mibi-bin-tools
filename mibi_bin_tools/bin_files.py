@@ -347,7 +347,12 @@ def extract_bin_files(data_dir: str, out_dir: Union[str, None],
             )
 
     if out_dir is None:
-        return xr.concat(image_data, dim='fov')
+        image_data = xr.concat(image_data, dim='fov')
+
+        if not intensities:
+            image_data = image_data.loc[:, ['pulse'], :, :, :]
+
+        return image_data
 
 
 def get_histograms_per_tof(data_dir: str, fov: str, channel: str, mass_range=(-0.3, 0.0),

@@ -207,6 +207,11 @@ def test_extract_bin_files(test_dir, fov, panel, intensities, filepath_checks):
     test_xr = bin_files.extract_bin_files(test_dir, None, None, panel, intensities, time_res)
     assert(list(test_xr.dims) == ['fov', 'type', 'x', 'y', 'channel'])
 
+    if not intensities:
+        assert(list(test_xr.type) == ['pulse'])
+    else:
+        assert(list(test_xr.type) == ['pulse', 'intensity', 'area'])
+
     assert(len(io_utils.list_files(test_dir, substrs=['.bin'])) == len(test_xr.fov))
     if len(test_xr.fov) > 1:
         comp = test_xr[0].values == test_xr[1].values
