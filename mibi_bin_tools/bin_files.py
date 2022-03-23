@@ -340,7 +340,7 @@ def extract_bin_files(data_dir: str, out_dir: Union[str, None],
                         ['pulse', 'intensity', 'area'],
                         np.arange(img_data.shape[1]),
                         np.arange(img_data.shape[2]),
-                        fov['targets'],
+                        list(fov['targets']),
                     ],
                     dims=['fov', 'type', 'x', 'y', 'channel'],
                 )
