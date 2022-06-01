@@ -4,7 +4,7 @@ from cython cimport cdivision, boundscheck, wraparound
 from libc.stdlib cimport malloc, free, realloc, qsort
 from libc.string cimport memcpy, memset
 from libc.stdio cimport fopen, fclose, FILE, EOF, fseek, SEEK_SET, SEEK_CUR, fread
-from libc.limits cimport USHRT_MAX, UINT_MAX
+from libc.limits cimport USHRT_MAX
 
 import numpy as np
 cimport numpy as np
@@ -462,8 +462,8 @@ def c_total_counts(char* filename):
     return int(counts)
 
 def c_total_spectra(char* filename):
-    cdef MAXINDEX_t total_spectra[UINT_MAX]
-    memset(total_spectra, 0, UINT_MAX * sizeof(MAXINDEX_t))
+    cdef MAXINDEX_t total_spectra[USHRT_MAX]
+    memset(total_spectra, 0, USHRT_MAX * sizeof(MAXINDEX_t))
 
     _extract_total_spectra(filename, total_spectra)
 
