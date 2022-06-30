@@ -61,7 +61,7 @@ def _set_tof_ranges(fov: Dict[str, Any], higher: np.ndarray, lower: np.ndarray,
 
 
 def _write_out(img_data: np.ndarray, out_dir: str, fov_name: str, targets: List[str],
-               intensities=True) -> None:
+               intensities=False) -> None:
     """Parses extracted data and writes out tifs
 
     Args:
@@ -79,30 +79,28 @@ def _write_out(img_data: np.ndarray, out_dir: str, fov_name: str, targets: List[
     out_dirs = [
         os.path.join(out_dir, fov_name),
         os.path.join(out_dir, fov_name, 'intensities'),
-        os.path.join(out_dir, fov_name, 'intensity_times_width')
     ]
     suffixes = [
         '',
         '_intensity',
-        '_int_width'
     ]
     save_dtypes = [
-        np.uint16,
         np.uint32,
         np.uint32,
     ]
     for i, (out_dir_i, suffix, save_dtype) in enumerate(zip(out_dirs, suffixes, save_dtypes)):
-        if i > 0 and not intensities:
-            continue
+        if i > img_data.shape[0]:
+            break
         if not os.path.exists(out_dir_i):
             os.makedirs(out_dir_i)
         for j, target in enumerate(targets):
-            io.imsave(
-                os.path.join(out_dir_i, f'{target}{suffix}.tiff'),
-                img_data[i, :, :, j].astype(save_dtype),
-                plugin='tifffile',
-                check_contrast=False
-            )
+            if i == 0 or target in intensities:
+                io.imsave(
+                    os.path.join(out_dir_i, f'{target}{suffix}.tiff'),
+                    img_data[i, :, :, j].astype(save_dtype),
+                    plugin='tifffile',
+                    check_contrast=False
+                )
 
 
 def _find_bin_files(data_dir: str,
@@ -284,7 +282,8 @@ def _parse_intensities(fov: Dict[str, Any], intensities: Union[bool, List[str]])
 def extract_bin_files(data_dir: str, out_dir: Union[str, None],
                       include_fovs: Union[List[str], None] = None,
                       panel: Union[Tuple[float, float], pd.DataFrame] = (-0.3, 0.0),
-                      intensities: Union[bool, List[str]] = False, time_res: float = 500e-6):
+                      intensities: Union[bool, List[str]] = False, replace=True,
+                      time_res: float = 500e-6):
     """Converts MibiScope bin files to pulse count, intensity, and intensity * width tiff images
 
     Args:
@@ -302,6 +301,8 @@ def extract_bin_files(data_dir: str, out_dir: Union[str, None],
             Whether or not to extract intensity and intensity * width images.  If a List, specific
             peaks can be extracted, ignoring the rest, which will only have pulse count images
             extracted.
+        replace (bool):
+            Whether to replace pulse images with intensity images.
         time_res (float):
             Time resolution for scaling parabolic transformation
     Returns:
@@ -323,21 +324,35 @@ def extract_bin_files(data_dir: str, out_dir: Union[str, None],
             bytes(bf, 'utf-8'), fov['lower_tof_range'],
             fov['upper_tof_range'], np.array(fov['calc_intensity'], dtype=np.uint8)
         )
+
+        if type_utils.any_true(intensities) and replace:
+            if type(intensities) is not list:
+                intensities = fov['targets']
+            for j, target in enumerate(intensities):
+                img_data[0, :, :, j] = img_data[1, :, :, j]
+            img_data = img_data[0, :, :, :]
+        elif not intensities:
+            img_data = img_data[0, :, :, :]
+
         if out_dir is not None:
             _write_out(
                 img_data,
                 out_dir,
                 fov['bin'][:-4],
                 fov['targets'],
-                type_utils.any_true(intensities)
+                intensities
             )
         else:
+            if replace or not intensities:
+                type_list = ['pulse']
+            else:
+                type_list = ['pulse', 'intensities']
             image_data.append(
                 xr.DataArray(
                     data=img_data[np.newaxis, :],
                     coords=[
                         [fov['bin'].split('.')[0]],
-                        ['pulse', 'intensity', 'area'],
+                        type_list,
                         np.arange(img_data.shape[1]),
                         np.arange(img_data.shape[2]),
                         list(fov['targets']),
@@ -349,8 +364,8 @@ def extract_bin_files(data_dir: str, out_dir: Union[str, None],
     if out_dir is None:
         image_data = xr.concat(image_data, dim='fov')
 
-        if not intensities:
-            image_data = image_data.loc[:, ['pulse'], :, :, :]
+        #if not intensities:
+            #image_data = image_data.loc[:, ['pulse'], :, :, :]
 
         return image_data
 
