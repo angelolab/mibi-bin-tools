@@ -61,7 +61,7 @@ def _set_tof_ranges(fov: Dict[str, Any], higher: np.ndarray, lower: np.ndarray,
 
 
 def _write_out(img_data: np.ndarray, out_dir: str, fov_name: str, targets: List[str],
-               intensities=False) -> None:
+               intensities: Union[bool, List[str]] = False) -> None:
     """Parses extracted data and writes out tifs
 
     Args:
@@ -88,13 +88,17 @@ def _write_out(img_data: np.ndarray, out_dir: str, fov_name: str, targets: List[
         np.uint32,
         np.uint32,
     ]
+
+    if not intensities:
+        intensities = [intensities]
+
     for i, (out_dir_i, suffix, save_dtype) in enumerate(zip(out_dirs, suffixes, save_dtypes)):
-        if i > img_data.shape[0]:
+        if i+1 > img_data.shape[0]:
             break
         if not os.path.exists(out_dir_i):
             os.makedirs(out_dir_i)
         for j, target in enumerate(targets):
-            if i == 0 or target in intensities:
+            if i == 0 or (target in list(intensities)):
                 io.imsave(
                     os.path.join(out_dir_i, f'{target}{suffix}.tiff'),
                     img_data[i, :, :, j].astype(save_dtype),
@@ -325,9 +329,11 @@ def extract_bin_files(data_dir: str, out_dir: Union[str, None],
             fov['upper_tof_range'], np.array(fov['calc_intensity'], dtype=np.uint8)
         )
 
-        if type_utils.any_true(intensities) and replace:
+        if type_utils.any_true(intensities):
             if type(intensities) is not list:
                 intensities = fov['targets']
+
+        if type_utils.any_true(intensities) and replace:
             for j, target in enumerate(intensities):
                 img_data[0, :, :, j] = img_data[1, :, :, j]
             img_data = img_data[0, :, :, :]

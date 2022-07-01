@@ -85,44 +85,54 @@ def filepath_checks():
     inner_dir_names = [
         '',
         'intensities',
-        'intensity_times_width',
     ]
 
     suffix_names = [
         '',
         '_intensity',
-        '_int_width',
     ]
 
-    def _filepath_checks(out_dir, fov_name, targets, intensities):
+    def _filepath_checks(out_dir, fov_name, targets, intensities, replace):
         assert(os.path.exists(os.path.join(out_dir, fov_name)))
         for i, (inner_name, suffix) in enumerate(zip(inner_dir_names, suffix_names)):
             inner_dir = os.path.join(out_dir, fov_name, inner_name)
-            made_intensity_folder = i < 1 or type_utils.any_true(intensities)
+            made_intensity_folder = i < 1 or (i == 1 and intensities and not replace)
             if made_intensity_folder:
                 assert(os.path.exists(inner_dir))
+                for target in targets:
+                    tif_path = os.path.join(inner_dir, f'{target}{suffix}.tiff')
+                    if i < 1 or (i == 1 and target in intensities):
+                        assert (os.path.exists(tif_path))
+                    else:
+                        assert (not os.path.exists(tif_path))
             else:
                 assert(not os.path.exists(inner_dir))
-            for target in targets:
-                tif_path = os.path.join(inner_dir, f'{target}{suffix}.tiff')
-                if made_intensity_folder:
-                    assert(os.path.exists(tif_path))
-                else:
-                    assert(not os.path.exists(tif_path))
 
     return _filepath_checks
 
 
 def test_write_out(filepath_checks):
 
-    img_data = np.zeros((3, 10, 10, 5), dtype=np.uint32)
+    img_data_compact = np.zeros((1, 10, 10, 5), dtype=np.uint32)
+    img_data_ext = np.zeros((2, 10, 10, 5), dtype=np.uint32)
     fov_name = 'fov1'
     targets = [chr(ord('a') + i) for i in range(5)]
+    intensities = [chr(ord('a') + i) for i in range(3)]
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        # correctness
-        bin_files._write_out(img_data, tmpdir, fov_name, targets)
-        filepath_checks(tmpdir, fov_name, targets, True)
+        # correct write out without intensities
+        bin_files._write_out(img_data_compact, tmpdir, fov_name, targets, intensities=False)
+        filepath_checks(tmpdir, fov_name, targets, intensities=False, replace=False)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # correct write out with intensities
+        bin_files._write_out(img_data_compact, tmpdir, fov_name, targets, intensities=intensities)
+        filepath_checks(tmpdir, fov_name, targets, intensities=intensities, replace=True)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # correct write out with intensities and without replacing
+        bin_files._write_out(img_data_ext, tmpdir, fov_name, targets, intensities=intensities)
+        filepath_checks(tmpdir, fov_name, targets, intensities=intensities, replace=False)
 
 
 def _make_blank_file(folder: str, name: str):
