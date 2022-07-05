@@ -89,7 +89,7 @@ def _write_out(img_data: np.ndarray, out_dir: str, fov_name: str, targets: List[
         np.uint32,
     ]
 
-    if not intensities:
+    if not type_utils.any_true(intensities):
         intensities = [intensities]
 
     for i, (out_dir_i, suffix, save_dtype) in enumerate(zip(out_dirs, suffixes, save_dtypes)):
@@ -313,6 +313,7 @@ def extract_bin_files(data_dir: str, out_dir: Union[str, None],
         None | np.ndarray:
             image data if no out_dir is provided, otherwise no return
     """
+
     fov_files = _find_bin_files(data_dir, include_fovs)
 
     for fov in fov_files.values():
@@ -334,11 +335,14 @@ def extract_bin_files(data_dir: str, out_dir: Union[str, None],
                 intensities = fov['targets']
 
         if type_utils.any_true(intensities) and replace:
-            for j, target in enumerate(intensities):
-                img_data[0, :, :, j] = img_data[1, :, :, j]
-            img_data = img_data[0, :, :, :]
-        elif not intensities:
-            img_data = img_data[0, :, :, :]
+            for j, target in enumerate(list(fov['targets'])):
+                if target in intensities:
+                    img_data[0, :, :, j] = img_data[1, :, :, j]
+            img_data = img_data[[0], :, :, :]
+        elif not type_utils.any_true(intensities):
+            img_data = img_data[[0], :, :, :]
+        else:
+            img_data = img_data[[0, 1], :, :, :]
 
         if out_dir is not None:
             _write_out(
@@ -349,7 +353,7 @@ def extract_bin_files(data_dir: str, out_dir: Union[str, None],
                 intensities
             )
         else:
-            if replace or not intensities:
+            if replace or not type_utils.any_true(intensities):
                 type_list = ['pulse']
             else:
                 type_list = ['pulse', 'intensities']
@@ -369,9 +373,6 @@ def extract_bin_files(data_dir: str, out_dir: Union[str, None],
 
     if out_dir is None:
         image_data = xr.concat(image_data, dim='fov')
-
-        #if not intensities:
-            #image_data = image_data.loc[:, ['pulse'], :, :, :]
 
         return image_data
 
