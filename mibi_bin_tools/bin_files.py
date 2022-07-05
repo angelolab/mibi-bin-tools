@@ -73,8 +73,9 @@ def _write_out(img_data: np.ndarray, out_dir: str, fov_name: str, targets: List[
             Name of the field of view
         targets (array_like):
             List of target names (i.e channels)
-        intensities (bool):
-            Save intensities
+        intensities (bool | List):
+            Whether or not to write out intensity images.  If a List, specific
+            peaks can be written out, ignoring the rest, which will only have pulse count images.
     """
     out_dirs = [
         os.path.join(out_dir, fov_name),
@@ -89,15 +90,15 @@ def _write_out(img_data: np.ndarray, out_dir: str, fov_name: str, targets: List[
         np.uint32,
     ]
 
-    if not type_utils.any_true(intensities):
-        intensities = [intensities]
-
     for i, (out_dir_i, suffix, save_dtype) in enumerate(zip(out_dirs, suffixes, save_dtypes)):
+        # break loop when index is larger than type dimension of img_data
         if i+1 > img_data.shape[0]:
             break
         if not os.path.exists(out_dir_i):
             os.makedirs(out_dir_i)
         for j, target in enumerate(targets):
+            # save all first images regardless of replacing
+            # if not replace (i=1), only save intensity images for specified targets
             if i == 0 or (target in list(intensities)):
                 io.imsave(
                     os.path.join(out_dir_i, f'{target}{suffix}.tiff'),
@@ -283,14 +284,37 @@ def _parse_intensities(fov: Dict[str, Any], intensities: Union[bool, List[str]])
         fov['calc_intensity'] = [False, ] * len(fov['targets'])
 
 
-def condense_img_data(img_data, fov, intensities, replace):
+def condense_img_data(img_data, targets, intensities, replace):
+    """Changes image data from separate pulse and intensity data into one column if replace=True.
+    Args:
+        img_data (np.array):
+            Contains the image data with all pulse and intensity information.
+        targets (list):
+            List of targets.
+        intensities (bool | List):
+            Whether or not to extract intensity images.  If a List, specific
+            peaks can be extracted, ignoring the rest, which will only have pulse count images
+            extracted.
+        replace (bool):
+            Whether to replace pulse images with intensity images.
+
+    Return:
+        altered img_data according to args
+
+    """
+    # extracting intensity and replacing
     if type_utils.any_true(intensities) and replace:
-        for j, target in enumerate(list(fov['targets'])):
+        for j, target in enumerate(targets):
+            # replace only specified targets
             if target in intensities:
                 img_data[0, :, :, j] = img_data[1, :, :, j]
         img_data = img_data[[0], :, :, :]
+
+    # not extracting intensity
     elif not type_utils.any_true(intensities):
         img_data = img_data[[0], :, :, :]
+
+    # extracting intensity but not replacing
     else:
         img_data = img_data[[0, 1], :, :, :]
 
@@ -316,7 +340,7 @@ def extract_bin_files(data_dir: str, out_dir: Union[str, None],
             If a pd.DataFrame, specific peaks with custom integration ranges.  Column names must be
             'Mass' and 'Target' with integration ranges specified via 'Start' and 'Stop' columns.
         intensities (bool | List):
-            Whether or not to extract intensity and intensity * width images.  If a List, specific
+            Whether or not to extract intensity images.  If a List, specific
             peaks can be extracted, ignoring the rest, which will only have pulse count images
             extracted.
         replace (bool):
@@ -348,7 +372,7 @@ def extract_bin_files(data_dir: str, out_dir: Union[str, None],
             if type(intensities) is not list:
                 intensities = fov['targets']
 
-        img_data = condense_img_data(img_data, fov, intensities, replace)
+        img_data = condense_img_data(img_data, list(fov['targets']), intensities, replace)
 
         if out_dir is not None:
             _write_out(
