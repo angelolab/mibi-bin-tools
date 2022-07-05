@@ -441,3 +441,34 @@ def get_total_counts(data_dir: str, include_fovs: Union[List[str], None] = None)
     outs = {name: _extract_bin.c_total_counts(bytes(bf, 'utf-8')) for name, bf in bin_files}
 
     return outs
+
+
+def get_total_spectra(data_dir: str, include_fovs: Union[List[str], None] = None,
+                      panel_df: pd.DataFrame = None):
+    """Retrieves total spectra for each field of view
+
+    Args:
+        data_dir (str | PathLike):
+            Directory containing bin files as well as accompanying json metadata files
+        include_fovs (List | None):
+            List of fovs to include. Includes all if None.
+        panel_df (pd.DataFrame | None):
+            If not None, get default callibration information
+
+    Returns:
+        dict:
+            dictionary of total spectra, with fov names as keys
+    """
+
+    fov_files = _find_bin_files(data_dir, include_fovs)
+
+    if panel_df is not None:
+        for fov in fov_files.values():
+            _fill_fov_metadata(data_dir, fov, panel_df, False, 500e-6)
+
+    bin_files = \
+        [(name, os.path.join(data_dir, fov['bin'])) for name, fov in fov_files.items()]
+
+    outs = {name: _extract_bin.c_total_spectra(bytes(bf, 'utf-8')) for name, bf in bin_files}
+
+    return outs, fov_files
