@@ -283,6 +283,20 @@ def _parse_intensities(fov: Dict[str, Any], intensities: Union[bool, List[str]])
         fov['calc_intensity'] = [False, ] * len(fov['targets'])
 
 
+def condense_img_data(img_data, fov, intensities, replace):
+    if type_utils.any_true(intensities) and replace:
+        for j, target in enumerate(list(fov['targets'])):
+            if target in intensities:
+                img_data[0, :, :, j] = img_data[1, :, :, j]
+        img_data = img_data[[0], :, :, :]
+    elif not type_utils.any_true(intensities):
+        img_data = img_data[[0], :, :, :]
+    else:
+        img_data = img_data[[0, 1], :, :, :]
+
+    return img_data
+
+
 def extract_bin_files(data_dir: str, out_dir: Union[str, None],
                       include_fovs: Union[List[str], None] = None,
                       panel: Union[Tuple[float, float], pd.DataFrame] = (-0.3, 0.0),
@@ -334,15 +348,7 @@ def extract_bin_files(data_dir: str, out_dir: Union[str, None],
             if type(intensities) is not list:
                 intensities = fov['targets']
 
-        if type_utils.any_true(intensities) and replace:
-            for j, target in enumerate(list(fov['targets'])):
-                if target in intensities:
-                    img_data[0, :, :, j] = img_data[1, :, :, j]
-            img_data = img_data[[0], :, :, :]
-        elif not type_utils.any_true(intensities):
-            img_data = img_data[[0], :, :, :]
-        else:
-            img_data = img_data[[0, 1], :, :, :]
+        img_data = condense_img_data(img_data, fov, intensities, replace)
 
         if out_dir is not None:
             _write_out(
