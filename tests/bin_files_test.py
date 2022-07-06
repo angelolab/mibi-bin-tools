@@ -150,16 +150,13 @@ def test_write_out(filepath_checks):
 
 
 def test_condense_img_data():
-    pulse = np.zeros((1, 5, 5, 5), dtype=np.uint32)
-    intensity = np.full((1, 5, 5, 5), 1, dtype=np.uint32)
+    pulse = [[[[0, 0, 0, 0, 0]]]]
+    intensity = [[[[1, 1, 1, 1, 1]]]]
     img_data = np.concatenate((pulse, intensity), axis=0)
     targets = [chr(ord('a') + i) for i in range(5)]
     intensities = [chr(ord('a') + i) for i in range(3)]
 
-    img_data_replace = img_data.copy()
-    for i in [range(0, len(intensities))]:
-        img_data_replace[0, :, :, i] = img_data[1, :, :, i].copy()
-    img_data_replace = img_data_replace[[0], :, :, :]
+    img_data_replace = [[[[1, 1, 1, 0, 0]]]]
 
     # test for no intensities
     no_intensity_data = bin_files.condense_img_data(img_data, targets, False, replace=True)
