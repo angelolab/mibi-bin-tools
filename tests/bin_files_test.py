@@ -149,6 +149,31 @@ def test_write_out(filepath_checks):
         filepath_checks(tmpdir, fov_name, targets, intensities=intensities, replace=False)
 
 
+def test_condense_img_data():
+    pulse = np.zeros((1, 5, 5, 5), dtype=np.uint32)
+    intensity = np.full((1, 5, 5, 5), 1, dtype=np.uint32)
+    img_data = np.concatenate((pulse, intensity), axis=0)
+    targets = [chr(ord('a') + i) for i in range(5)]
+    intensities = [chr(ord('a') + i) for i in range(3)]
+
+    img_data_replace = img_data.copy()
+    for i in [range(0, len(intensities))]:
+        img_data_replace[0, :, :, i] = img_data[1, :, :, i].copy()
+    img_data_replace = img_data_replace[[0], :, :, :]
+
+    # test for no intensities
+    no_intensity_data = bin_files.condense_img_data(img_data, targets, False, replace=True)
+    assert(np.array_equal(no_intensity_data, pulse))
+
+    # test for replaced intensities
+    replaced_data = bin_files.condense_img_data(img_data, targets, intensities, replace=True)
+    assert(np.array_equal(replaced_data, img_data_replace))
+
+    # test for not replaced intensities
+    not_replaced_data = bin_files.condense_img_data(img_data, targets, intensities, replace=False)
+    assert(np.array_equal(not_replaced_data, img_data))
+
+
 def _make_blank_file(folder: str, name: str):
     with open(os.path.join(folder, name), 'w'):
         pass

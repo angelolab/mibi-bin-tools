@@ -368,9 +368,10 @@ def extract_bin_files(data_dir: str, out_dir: Union[str, None],
             fov['upper_tof_range'], np.array(fov['calc_intensity'], dtype=np.uint8)
         )
 
+        # convert intensities=True to list of all targets
         if type_utils.any_true(intensities):
             if type(intensities) is not list:
-                intensities = fov['targets']
+                intensities = list(fov['targets'])
 
         img_data = condense_img_data(img_data, list(fov['targets']), intensities, replace)
 
