@@ -102,7 +102,7 @@ def filepath_checks():
     ]
 
     def _filepath_checks(out_dir, fov_name, targets, intensities, replace):
-        assert(os.path.exists(os.path.join(out_dir, fov_name)))
+        assert (os.path.exists(os.path.join(out_dir, fov_name)))
 
         if type_utils.any_true(intensities):
             if type(intensities) is not list:
@@ -112,7 +112,7 @@ def filepath_checks():
             inner_dir = os.path.join(out_dir, fov_name, inner_name)
             made_intensity_folder = i < 1 or (i == 1 and intensities and not replace)
             if made_intensity_folder:
-                assert(os.path.exists(inner_dir))
+                assert (os.path.exists(inner_dir))
                 for target in targets:
                     tif_path = os.path.join(inner_dir, f'{target}{suffix}.tiff')
                     if i < 1 or (i == 1 and target in intensities):
@@ -120,7 +120,7 @@ def filepath_checks():
                     else:
                         assert (not os.path.exists(tif_path))
             else:
-                assert(not os.path.exists(inner_dir))
+                assert (not os.path.exists(inner_dir))
 
     return _filepath_checks
 
@@ -160,15 +160,15 @@ def test_condense_img_data():
 
     # test for no intensities
     no_intensity_data = bin_files.condense_img_data(img_data, targets, False, replace=True)
-    assert(np.array_equal(no_intensity_data, pulse))
+    assert (np.array_equal(no_intensity_data, pulse))
 
     # test for replaced intensities
     replaced_data = bin_files.condense_img_data(img_data, targets, intensities, replace=True)
-    assert(np.array_equal(replaced_data, img_data_replace))
+    assert (np.array_equal(replaced_data, img_data_replace))
 
     # test for not replaced intensities
     not_replaced_data = bin_files.condense_img_data(img_data, targets, intensities, replace=False)
-    assert(np.array_equal(not_replaced_data, img_data))
+    assert (np.array_equal(not_replaced_data, img_data))
 
 
 def _make_blank_file(folder: str, name: str):
@@ -198,11 +198,11 @@ def test_find_bin_files():
 
         # correctness
         fov_dict = bin_files._find_bin_files(tmpdir)
-        assert(set(fov_dict.keys()) == {'fov1', 'fov2', 'fov3'})
+        assert (set(fov_dict.keys()) == {'fov1', 'fov2', 'fov3'})
 
         # include_fovs check
         fov_dict = bin_files._find_bin_files(tmpdir, include_fovs=include_fovs)
-        assert(set(fov_dict.keys()) == set(include_fovs))
+        assert (set(fov_dict.keys()) == set(include_fovs))
 
         with pytest.raises(FileNotFoundError, match='No viable bin file'):
             fov_dict = bin_files._find_bin_files(tmpdir, include_fovs=['fov_fake'])
@@ -259,17 +259,17 @@ def test_extract_bin_files(test_dir, fov, panel, intensities, replace, filepath_
     # test xr write out
     test_xr = bin_files.extract_bin_files(test_dir, None, None, panel, intensities,
                                           replace, time_res)
-    assert(list(test_xr.dims) == ['fov', 'type', 'x', 'y', 'channel'])
+    assert (list(test_xr.dims) == ['fov', 'type', 'x', 'y', 'channel'])
 
     if not type_utils.any_true(intensities) or (type_utils.any_true(intensities) and replace):
-        assert(list(test_xr.type) == ['pulse'])
+        assert (list(test_xr.type) == ['pulse'])
     else:
-        assert(list(test_xr.type) == ['pulse', 'intensities'])
+        assert (list(test_xr.type) == ['pulse', 'intensities'])
 
-    assert(len(io_utils.list_files(test_dir, substrs=['.bin'])) == len(test_xr.fov))
+    assert (len(io_utils.list_files(test_dir, substrs=['.bin'])) == len(test_xr.fov))
     if len(test_xr.fov) > 1:
         comp = test_xr[0].values == test_xr[1].values
-        assert(not np.all(comp))
+        assert (not np.all(comp))
 
 
 @parametrize_with_cases('test_dir, fov', cases=FovMetadataTestFiles)
@@ -305,4 +305,4 @@ def test_get_total_counts(test_dir, fov):
         bytes(bf, 'utf-8'), np.array([0], np.uint16),
         np.array([-1], dtype=np.uint16), np.array([False], dtype=np.uint8)
     )
-    assert(total_counts['fov-1-scan-1'] == np.sum(total_ion_image[0, :, :, :]))
+    assert (total_counts['fov-1-scan-1'] == np.sum(total_ion_image[0, :, :, :]))
