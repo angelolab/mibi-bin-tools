@@ -7,8 +7,8 @@ import pandas as pd
 import skimage.io as io
 import xarray as xr
 
-from mibi_bin_tools import io_utils, type_utils, _extract_bin
-from tmi.image_utils import save_image
+from mibi_bin_tools import type_utils, _extract_bin
+from tmi import io_utils, image_utils
 
 
 def _mass2tof(masses_arr: np.ndarray, mass_offset: float, mass_gain: float,
@@ -102,7 +102,7 @@ def _write_out(img_data: np.ndarray, out_dir: str, fov_name: str, targets: List[
             # if not replace (i=1), only save intensity images for specified targets
             if i == 0 or (target in list(intensities)):
                 fname = os.path.join(out_dir_i, f"{target}{suffix}.tiff")
-                save_image(fname=fname, data=img_data[i, :, :, j].astype(save_dtype))
+                image_utils.save_image(fname=fname, data=img_data[i, :, :, j].astype(save_dtype))
 
 
 def _find_bin_files(data_dir: str,

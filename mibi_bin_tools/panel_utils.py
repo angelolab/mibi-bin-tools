@@ -1,7 +1,7 @@
 from typing import Union, List
 import pandas as pd
 
-from mibi_bin_tools.type_utils import make_iterable
+from tmi import misc_utils
 
 
 def make_panel(mass: Union[float, List[float]],
@@ -25,9 +25,9 @@ def make_panel(mass: Union[float, List[float]],
             single mass panel as pandas dataframe
     """
 
-    mass = make_iterable(mass)
+    mass = misc_utils.make_iterable(mass)
     if target_name is not None:
-        target_name = make_iterable(target_name)
+        target_name = misc_utils.make_iterable(target_name)
         if len(mass) != len(target_name):
             raise ValueError(
                 '`mass` and `target_name` did not contain the same number of elements.  '
@@ -38,7 +38,7 @@ def make_panel(mass: Union[float, List[float]],
 
     # check for range lists
     for r in (low_range, high_range):
-        if make_iterable(r) == r:
+        if misc_utils.make_iterable(r) == r:
             if len(r) != len(mass):
                 raise ValueError(
                     '`mass` and a range argument did not contain the same number of elements.  '
@@ -46,8 +46,8 @@ def make_panel(mass: Union[float, List[float]],
                     'be set to float values, e.g `low_range=0.3`'
                 )
 
-    low_range = make_iterable(low_range)
-    high_range = make_iterable(high_range)
+    low_range = misc_utils.make_iterable(low_range)
+    high_range = misc_utils.make_iterable(high_range)
 
     if len(low_range) != len(mass):
         low_range = low_range * len(mass)

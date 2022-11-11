@@ -1,4 +1,5 @@
 from typing import Union, Iterable
+from tmi import misc_utils
 
 
 def any_true(a: Union[bool, Iterable[bool]]) -> bool:
@@ -12,20 +13,4 @@ def any_true(a: Union[bool, Iterable[bool]]) -> bool:
         bool:
             whether any true values where found
     """
-    return any(make_iterable(a))
-
-
-def make_iterable(a: Union[type, Iterable[type]], ignore_str=True) -> Iterable[type]:
-    """ Convert noniterable type to singelton in list
-
-    Args:
-        a (T | Iterable[T]):
-            value or iterable of type T
-        ignore_str (bool):
-            whether to ignore the iterability of the str type
-
-    Returns:
-        List[T]:
-            a as singleton in list, or a if a was already iterable.
-    """
-    return a if hasattr(a, '__iter__') and not (isinstance(a, str) and ignore_str) else [a]
+    return any(misc_utils.make_iterable(a))
