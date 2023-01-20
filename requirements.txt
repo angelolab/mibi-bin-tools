@@ -1,7 +1,7 @@
 Cython>=0.29.24,<1
-matplotlib==3.4.3
+matplotlib>=3
 numpy>=1.21.6,<2
 pandas>=1.3.5,<2
 scikit-image>=0.19.3,<0.20
-tmi @ git+https://github.com/angelolab/tmi.git@v0.0.1
+tmi @ git+https://github.com/angelolab/tmi.git@v0.1.2
 xarray>=2022.6.0,<2023
