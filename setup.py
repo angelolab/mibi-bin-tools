@@ -1,4 +1,4 @@
-from os import path, pardir
+from os import pardir, path
 from setuptools import setup, find_packages, Extension
 import numpy as np
 from Cython.Build import cythonize
@@ -7,54 +7,24 @@ CYTHON_DEBUG = False
 
 if CYTHON_DEBUG:
     from Cython.Compiler.Options import get_directive_defaults
+    
     directive_defaults = get_directive_defaults()
+    directive_defaults["linetrace"] = True
+    directive_defaults["binding"] = True
 
-    directive_defaults['linetrace'] = True
-    directive_defaults['binding'] = True
+CYTHON_MACROS = [("CYTHON_TRACE", "1")] if CYTHON_DEBUG else None
 
-CYTHON_MACROS = [('CYTHON_TRACE', '1')] if CYTHON_DEBUG else None
-
-VERSION = '0.2.4'
-
-PKG_FOLDER = path.abspath(path.join(__file__, pardir))
-
-with open(path.join(PKG_FOLDER, 'requirements.txt')) as req_file:
-    requirements = req_file.read().splitlines()
-
-# set a long description which is basically the README
-with open(path.join(PKG_FOLDER, 'README.md')) as f:
-    long_description = f.read()
+PKG_FOLDER = path.relpath(path.join(__file__, pardir))
 
 extensions = [
     Extension(
         name="mibi_bin_tools._extract_bin",
-        sources=[path.join(PKG_FOLDER, "mibi_bin_tools/_extract_bin.pyx")],
+        sources=[path.join(PKG_FOLDER, "src", "mibi_bin_tools", "_extract_bin.pyx")],
         include_dirs=[np.get_include()],
         define_macros=CYTHON_MACROS
     )
 ]
 
 setup(
-    name='mibi-bin-tools',
-    version=VERSION,
-    packages=find_packages(),
-    license='Modified Apache License 2.0',
-    description='Scripts for extracting .bin files from the commercial MIBI instrument',
-    author='Angelo Lab',
-    url='https://github.com/angelolab/mibi-bin-tools',
-    download_url=f'https://github.com/angelolab/mibi-bin-tools/archive/v{VERSION}.tar.gz',
     ext_modules=cythonize(extensions, compiler_directives={'language_level': "3"}),
-    install_requires=requirements,
-    extras_require={
-        'tests': ['pytest',
-                  'pytest-cov',
-                  'pytest-pycodestyle',
-                  'testbook']
-    },
-    long_description=long_description,
-    long_description_content_type='text/markdown',
-    classifiers=['License :: OSI Approved :: Apache Software License',
-                 'Development Status :: 4 - Beta',
-                 'Programming Language :: Python :: 3',
-                 'Programming Language :: Python :: 3.6']
 )
