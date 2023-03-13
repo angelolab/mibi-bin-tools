@@ -22,7 +22,7 @@ name = "mibi-bin-tools"
 authors = [{name = "Angelo Lab", email = "theangelolab@gmail.com"}]
 description = "Source for extracting .bin files from the commercial MIBI."
 readme = "README.md"
-requries-python = ">=3.8"
+requires-python = ">=3.8"
 license = {text = "Modified Apache License 2.0"}
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -35,7 +35,7 @@ classifiers = [
 dynamic = ["version"]
 urls = {repository = "https://github.com/angelolab/mibi-bin-tools"}
 
-[project.optoinal-dependencies]
+[project.optional-dependencies]
 test = [
     "coveralls[toml]",
     "pytest",
