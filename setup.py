@@ -1,5 +1,5 @@
 from os import pardir, path
-from setuptools import setup, find_packages, Extension
+from setuptools import setup, Extension
 import numpy as np
 from Cython.Build import cythonize
 
