@@ -127,9 +127,7 @@ addopts = [
     "-v",
     "-s",
     "--durations=20",
-    "--randomly-seed=24",
-    "--randomly-dont-reorganize",
-    "--cov=mibi-bin-tools",
+    "--cov=mibi_bin_tools",
     "--cov-report=lcov",
     "--pycodestyle",
 ]
