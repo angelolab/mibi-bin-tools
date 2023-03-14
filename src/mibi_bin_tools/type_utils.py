@@ -1,5 +1,5 @@
 from typing import Union, Iterable
-from tmi import misc_utils
+from alpineer import misc_utils
 
 
 def any_true(a: Union[bool, Iterable[bool]]) -> bool:

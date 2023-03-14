@@ -8,7 +8,7 @@ import skimage.io as io
 import xarray as xr
 
 from mibi_bin_tools import type_utils, _extract_bin
-from tmi import io_utils, image_utils
+from alpineer import io_utils, image_utils
 
 
 def _mass2tof(masses_arr: np.ndarray, mass_offset: float, mass_gain: float,
