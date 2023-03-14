@@ -1,7 +1,7 @@
 from typing import Union, List
 import pandas as pd
 
-from tmi import misc_utils
+from alpineer import misc_utils
 
 
 def make_panel(mass: Union[float, List[float]],

@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 
 from mibi_bin_tools import bin_files, type_utils, _extract_bin
-from tmi import io_utils
+from alpineer import io_utils
 
 THIS_DIR = Path(__file__).parent
 

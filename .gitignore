@@ -12,3 +12,4 @@ mibi_bin_tools/*.so
 .coverage
 htmlcov/
 .DS_Store
+.venv
