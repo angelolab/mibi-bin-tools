@@ -22,13 +22,14 @@ name = "mibi-bin-tools"
 authors = [{name = "Angelo Lab", email = "theangelolab@gmail.com"}]
 description = "Source for extracting .bin files from the commercial MIBI."
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 license = {text = "Modified Apache License 2.0"}
 classifiers = [
     "Development Status :: 4 - Beta",
     "Programming Language :: Cython",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "License :: OSI Approved :: Apache Software License",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
@@ -50,13 +51,12 @@ version_scheme = "release-branch-semver"
 local_scheme = "no-local-version"
 
 [tool.cibuildwheel]
-build = ["cp38-*"]
+build = ["cp310-*", "cp311-*"]
 skip = [
     "cp36-*",        # Python 3.6
     "cp37-*",        # Python 3.7
+    "cp38-*",        # Python 3.8
     "cp39-*",        # Python 3.9
-    "cp310-*",       # Python 3.10
-    "cp311-*",       # Python 3.11
     "*-musllinux_*", # Musllinux
     "pp*",           # PyPy wheels on all platforms
     "*_i686",        # 32bit Linux Wheels
