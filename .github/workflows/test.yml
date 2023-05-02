@@ -7,7 +7,7 @@ permissions:
   contents: read # to fetch code (actions/checkout)
 jobs:
   test:
-    name: ${{ github.repository }}
+    name: ${{ matrix.os }} - ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
       # Ensure that if any job fails, all jobs are cancelled.
@@ -40,6 +40,6 @@ jobs:
       - name: Archive Coverage
         uses: actions/upload-artifact@v3
         with:
-          name: coverage
+          name: coverage-${{ join(matrix.*, '-') }}
           path: |
-            coverage-${{ join(matrix.*, '-') }}.lcov
+            coverage.lcov
