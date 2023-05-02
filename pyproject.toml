@@ -51,12 +51,11 @@ version_scheme = "release-branch-semver"
 local_scheme = "no-local-version"
 
 [tool.cibuildwheel]
-build = ["cp310-*", "cp311-*"]
+build = ["cp39-*", "cp310-*", "cp311-*"]
 skip = [
     "cp36-*",        # Python 3.6
     "cp37-*",        # Python 3.7
     "cp38-*",        # Python 3.8
-    "cp39-*",        # Python 3.9
     "*-musllinux_*", # Musllinux
     "pp*",           # PyPy wheels on all platforms
     "*_i686",        # 32bit Linux Wheels
