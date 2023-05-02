@@ -3,7 +3,7 @@
 
 | | | 
 | ---        |    ---  |
-| CI / CD | [![CI](https://github.com/angelolab/mibi-bin-tools/actions/workflows/ci.yml/badge.svg)](https://github.com/angelolab/mibi-bin-tools/actions/workflows/ci.yml) [![Coverage Status](https://coveralls.io/repos/github/angelolab/mibi-bin-tools/badge.svg?branch=master)](https://coveralls.io/github/angelolab/mibi-bin-tools?branch=master) |
+| CI / CD | [![CI](https://github.com/angelolab/mibi-bin-tools/actions/workflows/ci.yml/badge.svg)](https://github.com/angelolab/mibi-bin-tools/actions/workflows/ci.yml) [![Coverage Status](https://coveralls.io/repos/github/angelolab/mibi-bin-tools/badge.svg?branch=main)](https://coveralls.io/github/angelolab/mibi-bin-tools?branch=main) |
 | Package | [![PyPI - Version](https://img.shields.io/pypi/v/mibi-bin-tools.svg?logo=pypi&label=PyPI&logoColor=gold)](https://pypi.org/project/mibi-bin-tools/) [![PyPI - Downloads](https://img.shields.io/pypi/dm/mibi-bin-tools.svg?color=blue&label=Downloads&logo=pypi&logoColor=gold)](https://pypi.org/project/mibi-bin-tools/) [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/mibi-bin-tools.svg?logo=python&label=Python&logoColor=gold)](https://pypi.org/project/mibi-bin-tools/) |
 |Meta | [![PyPI - License](https://img.shields.io/pypi/l/mibi-bin-tools?color=9400d3)](LICENSE) |
 
