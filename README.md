@@ -1,17 +1,30 @@
-[![Build Status](https://travis-ci.com/angelolab/mibi-bin-tools.svg?branch=master)](https://travis-ci.com/angelolab/mibi-bin-tools)
-[![Coverage Status](https://coveralls.io/repos/github/angelolab/mibi-bin-tools/badge.svg?branch=master)](https://coveralls.io/github/angelolab/mibi-bin-tools?branch=master)
-
 # mibi-bin-tools
+<div align="center">
+
+| | | 
+| ---        |    ---  |
+| CI / CD | [![CI](https://github.com/angelolab/mibi-bin-tools/actions/workflows/ci.yml/badge.svg)](https://github.com/angelolab/mibi-bin-tools/actions/workflows/ci.yml) [![Coverage Status](https://coveralls.io/repos/github/angelolab/mibi-bin-tools/badge.svg?branch=master)](https://coveralls.io/github/angelolab/mibi-bin-tools?branch=master) |
+| Package | [![PyPI - Version](https://img.shields.io/pypi/v/mibi-bin-tools.svg?logo=pypi&label=PyPI&logoColor=gold)](https://pypi.org/project/mibi-bin-tools/) [![PyPI - Downloads](https://img.shields.io/pypi/dm/mibi-bin-tools.svg?color=blue&label=Downloads&logo=pypi&logoColor=gold)](https://pypi.org/project/mibi-bin-tools/) [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/mibi-bin-tools.svg?logo=python&label=Python&logoColor=gold)](https://pypi.org/project/mibi-bin-tools/) |
+|Meta | [![PyPI - License](https://img.shields.io/pypi/l/mibi-bin-tools?color=9400d3)](LICENSE) |
+
+</div>
 
 Toolbox for extracting tiff images from MIBIScope .bin files 
 
-## To install the project:
+## Installation:
 
+### PyPI
+
+```sh
+pip install mibi-bin-tools
+```
+
+### Source
 Open terminal and navigate to where you want the code stored.
 
 Then input the command:
 
-```
+```sh
 git clone https://github.com/angelolab/mibi-bin-tools.git
 ```
 
