@@ -40,17 +40,17 @@ jobs:
           name: distributions
           path: dist
 
-      - uses: pypa/gh-action-pypi-publish@release/v1.6
+      - uses: pypa/gh-action-pypi-publish@release/v1.8
         with:
           user: __token__
           password: ${{ secrets.TEST_PYPI_API_TOKEN }}
-          repository_url: https://test.pypi.org/legacy/
-          packages_dir: dist/
+          repository-url: https://test.pypi.org/legacy/
+          packages-dir: dist/
           verbose: true
 
   pypi_publish:
     name: Publish ${{ github.repository }} to to PyPI
-    needs: [test, build_wheels_sdist, test_pypi_publish]
+    needs: [test_pypi_publish]
 
     runs-on: ubuntu-latest
     # Publish when a GitHub Release is created, use the following rule:
@@ -63,9 +63,9 @@ jobs:
           path: dist
 
       - name: PYPI Publish
-        uses: pypa/gh-action-pypi-publish@release/v1.6
+        uses: pypa/gh-action-pypi-publish@release/v1.8
         with:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
-          packages_dir: dist/
+          packages-dir: dist/
           verbose: true

@@ -1,4 +1,4 @@
-name: Wheel Builder
+name: Build
 
 on:
   workflow_call:
@@ -8,13 +8,13 @@ permissions:
 
 jobs:
   build_wheels:
-    name: Build  ${{ github.repository }} wheels on ${{ matrix.os }}
+    name: ${{ matrix.os }} Wheels
     runs-on: ${{ matrix.os }}
     strategy:
       # Ensure that a wheel builder finishes even if another fails
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-12]
+        os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
       - name: Checkout ${{ github.repository }}
@@ -29,7 +29,7 @@ jobs:
           platforms: arm64
 
       - name: Build Wheels
-        uses: pypa/cibuildwheel@v2.11.4
+        uses: pypa/cibuildwheel@v2.12.3
         with:
           package-dir: .
           output-dir: wheelhouse
@@ -42,7 +42,7 @@ jobs:
           path: wheelhouse/*.whl
 
   build_sdist:
-    name: Build ${{ github.repository }} Source Distribution
+    name: Source Distribution
     runs-on: ubuntu-latest
     steps:
       - name: Checkout ${{ github.repository }}
