@@ -5,11 +5,12 @@ __pycache__/
 build/
 .pytest_cache/
 scripts/
-mibi_bin_tools/*.c
+src/**/*.c
 mibi_bin_tools/*.html
-mibi_bin_tools/*.so
+src/**/*.so
 *.egg-info
 .coverage
 htmlcov/
 .DS_Store
 .venv
+dist/
