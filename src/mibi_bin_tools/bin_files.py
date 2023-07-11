@@ -52,13 +52,11 @@ def _set_tof_ranges(fov: Dict[str, Any], higher: np.ndarray, lower: np.ndarray,
     """
     key_names = ('upper_tof_range', 'lower_tof_range')
     mass_ranges = (higher, lower)
-    wrapping_functions = (np.ceil, np.floor)
 
-    for key, masses, wrap in zip(key_names, mass_ranges, wrapping_functions):
-        fov[key] = \
-            wrap(
-                _mass2tof(masses, fov['mass_offset'], fov['mass_gain'], time_res)
-            ).astype(np.uint16)
+    for key, masses, wrap in zip(key_names, mass_ranges):
+        fov[key] = _mass2tof(
+            masses, fov['mass_offset'], fov['mass_gain'], time_res
+        ).astype(np.uint16)
 
 
 def _write_out(img_data: np.ndarray, out_dir: str, fov_name: str, targets: List[str],
@@ -458,13 +456,23 @@ def get_median_pulse_height(data_dir: str, fov: str, channel: str,
 
     local_bin_file = os.path.join(data_dir, fov['bin'])
 
+    import timeit
+    start_time = timeit.default_timer()
     _, intensities, _ = \
         _extract_bin.c_extract_histograms(bytes(local_bin_file, 'utf-8'),
                                           fov['lower_tof_range'][0],
                                           fov['upper_tof_range'][0])
+    end_time = timeit.default_timer()
+    print("Total time to extract pulse height intensities: %.2f" % (end_time - start_time))
 
+    start_time = timeit.default_timer()
     int_bin = np.cumsum(intensities) / intensities.sum()
+    end_time = timeit.default_timer()
+    print("Total time to cumulatively sum pulse heights: %.2f" % (end_time - start_time))
+    start_time = timeit.default_timer()
     median_height = (np.abs(int_bin - 0.5)).argmin()
+    end_time = timeit.default_timer()
+    print("Total time to generate median position in cumsum pulse height arr: %.2f" % (end_time - start_time))
 
     return median_height
 
