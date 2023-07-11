@@ -54,6 +54,7 @@ def _set_tof_ranges(fov: Dict[str, Any], higher: np.ndarray, lower: np.ndarray,
     mass_ranges = (higher, lower)
 
     for key, masses, wrap in zip(key_names, mass_ranges):
+        # truncate the conversion to ensure consistency
         fov[key] = _mass2tof(
             masses, fov['mass_offset'], fov['mass_gain'], time_res
         ).astype(np.uint16)
