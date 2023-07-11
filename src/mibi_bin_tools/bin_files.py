@@ -456,23 +456,13 @@ def get_median_pulse_height(data_dir: str, fov: str, channel: str,
 
     local_bin_file = os.path.join(data_dir, fov['bin'])
 
-    import timeit
-    start_time = timeit.default_timer()
     _, intensities, _ = \
         _extract_bin.c_extract_histograms(bytes(local_bin_file, 'utf-8'),
                                           fov['lower_tof_range'][0],
                                           fov['upper_tof_range'][0])
-    end_time = timeit.default_timer()
-    print("Total time to extract pulse height intensities: %.2f" % (end_time - start_time))
 
-    start_time = timeit.default_timer()
     int_bin = np.cumsum(intensities) / intensities.sum()
-    end_time = timeit.default_timer()
-    print("Total time to cumulatively sum pulse heights: %.2f" % (end_time - start_time))
-    start_time = timeit.default_timer()
     median_height = (np.abs(int_bin - 0.5)).argmin()
-    end_time = timeit.default_timer()
-    print("Total time to generate median position in cumsum pulse height arr: %.2f" % (end_time - start_time))
 
     return median_height
 
