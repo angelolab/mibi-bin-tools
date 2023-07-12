@@ -52,13 +52,12 @@ def _set_tof_ranges(fov: Dict[str, Any], higher: np.ndarray, lower: np.ndarray,
     """
     key_names = ('upper_tof_range', 'lower_tof_range')
     mass_ranges = (higher, lower)
-    wrapping_functions = (np.ceil, np.floor)
 
-    for key, masses, wrap in zip(key_names, mass_ranges, wrapping_functions):
-        fov[key] = \
-            wrap(
-                _mass2tof(masses, fov['mass_offset'], fov['mass_gain'], time_res)
-            ).astype(np.uint16)
+    for key, masses in zip(key_names, mass_ranges):
+        # truncate the conversion to ensure consistency
+        fov[key] = _mass2tof(
+            masses, fov['mass_offset'], fov['mass_gain'], time_res
+        ).astype(np.uint16)
 
 
 def _write_out(img_data: np.ndarray, out_dir: str, fov_name: str, targets: List[str],
