@@ -1,0 +1,15 @@
+name: mibi-bin-tools
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - numpy
+  - pandas
+  - xarray
+  - scipy
+  - scikit-image
+  - matplotlib
+  - pip:
+    - alpineer --user
+    - . --user
