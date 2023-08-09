@@ -236,7 +236,7 @@ cdef void _extract_histograms(const char* filename, DTYPE_t low_range,
     fclose(fp)
     free(file_buffer)
 
-cdef int _comp(const void *a, const void *b) nogil:
+cdef int _comp(const void *a, const void *b) noexcept nogil:
     cdef int *x = <int *>a
     cdef int *y = <int *>b
     return x[0] - y[0]
