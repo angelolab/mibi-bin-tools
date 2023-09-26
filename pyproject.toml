@@ -2,7 +2,7 @@
 requires = [
     "setuptools",
     "wheel",
-    "Cython>=0.29.24,<1",
+    "Cython>=3",
     "oldest-supported-numpy",
     "setuptools_scm[toml]>=6.2",
 ]
@@ -10,9 +10,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 dependencies = [
-    "Cython>=0.29.24",
+    "Cython>=3",
     "matplotlib>=3",
-    "numpy>=1.2",
+    "numpy>=1.25",
     "pandas>=2",
     "scikit-image>=0.19",
     "alpineer>=0.1.9",
