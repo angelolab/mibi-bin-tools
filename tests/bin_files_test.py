@@ -279,7 +279,7 @@ def test_get_width_histogram(test_dir, fov, panel):
     bin_files.get_histograms_per_tof(
         test_dir,
         fov['json'].split('.')[0],
-        'SMA',
+        ['SMA'],
         panel,
         time_res=500e-6
     )
@@ -291,7 +291,7 @@ def test_median_height_vs_mean_pp(test_dir, fov, panel):
     bin_files.get_median_pulse_height(
         test_dir,
         fov['json'].split('.')[0],
-        'SMA',
+        ['SMA'],
         panel,
         500e-6
     )
