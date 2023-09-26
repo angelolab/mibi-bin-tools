@@ -279,10 +279,11 @@ cdef _extract_histograms(const char* filename, DTYPE_t[:] low_range,
     )
 
 
-cdef int _comp(const void *a, const void *b) nogil:
+cdef int _comp(const void *a, const void *b) noexcept nogil:
     cdef int *x = <int *>a
     cdef int *y = <int *>b
     return x[0] - y[0]
+
 
 cdef void _extract_pulse_height_and_positive_pixel(const char* filename, DTYPE_t low_range,
                                                    DTYPE_t high_range,
