@@ -175,8 +175,8 @@ cdef _extract_histograms(const char* filename, DTYPE_t[:] low_range,
                          DTYPE_t[:] high_range):
     cdef DTYPE_t num_x, num_y, num_trig, num_frames, desc_len, trig, num_pulses, pulse, time
     cdef DTYPE_t intensity
-    cdef SMALL_t pulse_count, width
-    cdef MAXINDEX_t data_start, pix, pp_count
+    cdef SMALL_t width
+    cdef MAXINDEX_t data_start, pix
     cdef int idx
 
     # 10MB buffer
