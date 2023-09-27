@@ -482,9 +482,11 @@ def get_median_pulse_height(data_dir: str, fov: str, channels: List[str] = None,
     local_bin_file = os.path.join(data_dir, fov['bin'])
 
     _, intensities, _ = \
-        _extract_bin.c_extract_histograms(bytes(local_bin_file, 'utf-8'),
-                                                   fov['lower_tof_range'],
-                                                   fov['upper_tof_range'])
+        _extract_bin.c_extract_histograms(
+            bytes(local_bin_file, 'utf-8'),
+            fov['lower_tof_range'],
+            fov['upper_tof_range']
+        )
 
     int_bin = np.cumsum(intensities, axis=0) / intensities.sum(axis=0)
     median_height = (np.abs(int_bin - 0.5)).argmin(axis=0)
