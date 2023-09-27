@@ -61,6 +61,43 @@ class FovMetadataTestPanels:
         }])
         return bad_panel
 
+    @case(tags=['multiple'])
+    def case_multiple_chan_panel(self):
+        panel = pd.DataFrame([
+            {
+                'Mass': 89,
+                'Target': 'SMA',
+                'Start': 88.7,
+                'Stop': 89.0
+            },
+            {
+                'Mass': 152,
+                'Target': 'CD38',
+                'Start': 151.7,
+                'Stop': 152
+            }
+        ])
+        return panel
+
+    @case(tags=['multiple'])
+    @pytest.mark.xfail(raises=KeyError, strict=True)
+    def case_bad_specified_panel(self):
+        bad_panel = pd.DataFrame([
+            {
+                'isotope': 89,
+                'antibody': 'SMA',
+                'start': 88.7,
+                'stop': 89.0
+            },
+            {
+                'isotope': 152,
+                'antibody': 'CD38',
+                'start': 151.7,
+                'stop': 152
+            }
+        ])
+        return bad_panel
+
 
 class FovMetadataTestChannels:
 
@@ -274,24 +311,24 @@ def test_extract_bin_files(test_dir, fov, panel, intensities, replace, filepath_
 
 
 @parametrize_with_cases('test_dir, fov', cases=FovMetadataTestFiles)
-@parametrize_with_cases('panel', cases=FovMetadataTestPanels, has_tag='specified')
+@parametrize_with_cases('panel', cases=FovMetadataTestPanels, has_tag='multiple')
 def test_get_width_histogram(test_dir, fov, panel):
     bin_files.get_histograms_per_tof(
         test_dir,
         fov['json'].split('.')[0],
-        ['SMA'],
+        ['SMA', 'CD38'],
         panel,
         time_res=500e-6
     )
 
 
 @parametrize_with_cases('test_dir, fov', cases=FovMetadataTestFiles)
-@parametrize_with_cases('panel', cases=FovMetadataTestPanels, has_tag='specified')
+@parametrize_with_cases('panel', cases=FovMetadataTestPanels, has_tag='multiple')
 def test_median_height_vs_mean_pp(test_dir, fov, panel):
     bin_files.get_median_pulse_height(
         test_dir,
         fov['json'].split('.')[0],
-        ['SMA'],
+        ['SMA', 'CD38'],
         panel,
         500e-6
     )
