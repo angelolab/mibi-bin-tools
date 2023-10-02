@@ -29,7 +29,10 @@ cdef inline int _minimum_larger_value_in_sorted(const DTYPE_t[:] low_range, DTYP
     while start <= end:
         mid = (start + end) // 2
 
-        if low_range[mid] < val:
+        if low_range[mid] == val:
+            return mid + 1
+
+        elif low_range[mid] < val:
             start = mid + 1
 
         else:
@@ -168,25 +171,13 @@ cdef INT_t[:, :, :, :] _extract_bin(const char* filename,
 @boundscheck(False) # Deactivate bounds checking
 @wraparound(False)  # Deactivate negative indexing
 @cdivision(True) # Ignore modulo/divide by zero warning
-cdef void _extract_histograms(const char* filename, DTYPE_t low_range,
-                              DTYPE_t high_range, MAXINDEX_t* widths, MAXINDEX_t* intensities,
-                              MAXINDEX_t* pulse_counts):
-    """ Creates histogram of observed peak widths within specified integration range
-
-    Args:
-        filename (const char*):
-            Name of bin file to extract.
-        low_range (uint16_t):
-            Low time range for integration
-        high_range (uint16_t):
-            High time range for integration
-    """
+cdef _extract_histograms(const char* filename, DTYPE_t[:] low_range,
+                         DTYPE_t[:] high_range):
     cdef DTYPE_t num_x, num_y, num_trig, num_frames, desc_len, trig, num_pulses, pulse, time
     cdef DTYPE_t intensity
     cdef SMALL_t width
-    cdef MAXINDEX_t data_start, pix 
+    cdef MAXINDEX_t data_start, pix
     cdef int idx
-    cdef DTYPE_t p_cnt = 0
 
     # 10MB buffer
     cdef MAXINDEX_t BUFFER_SIZE = 10 * 1024 * 1024
@@ -210,42 +201,94 @@ cdef void _extract_histograms(const char* filename, DTYPE_t low_range,
     data_start = \
         <MAXINDEX_t>(num_x) * <MAXINDEX_t>(num_y) * <MAXINDEX_t>(num_frames) * 8 + desc_len + 0x12
 
+    widths = \
+        cvarray(
+            shape=(<MAXINDEX_t>256, <MAXINDEX_t>low_range.shape[0]),
+            itemsize=sizeof(MAXINDEX_t),
+            format='Q'
+        )
+    intensities = \
+        cvarray(
+            shape=(<MAXINDEX_t>USHRT_MAX, <MAXINDEX_t>low_range.shape[0]),
+            itemsize=sizeof(MAXINDEX_t),
+            format='Q'
+        )
+    pulse_counts = \
+        cvarray(
+            shape=(<MAXINDEX_t>256, <MAXINDEX_t>low_range.shape[0]),
+            itemsize=sizeof(MAXINDEX_t),
+            format='Q'
+        )
+    cdef MAXINDEX_t[:, :] widths_view = widths
+    cdef MAXINDEX_t[:, :] intensities_view = intensities
+    cdef MAXINDEX_t[:, :] pulse_counts_view = pulse_counts
+
+    widths_view[:, :] = 0
+    intensities_view[:, :] = 0
+    pulse_counts_view[:, :] = 0
+
+    p_cnt = \
+        cvarray(
+            shape=(<MAXINDEX_t>(num_x) * <MAXINDEX_t>(num_y), <MAXINDEX_t>low_range.shape[0]),
+            itemsize=sizeof(MAXINDEX_t),
+            format='Q'
+        )
+    cdef MAXINDEX_t[:, :] p_cnt_view = p_cnt
+    p_cnt_view[:, :] = 0
+
     fseek(fp, data_start, SEEK_SET)
     fread(file_buffer, sizeof(char), BUFFER_SIZE, fp)
     for pix in range(<MAXINDEX_t>(num_x) * <MAXINDEX_t>(num_y)):
-        #if pix % num_x == 0:
+        # if pix % num_x == 0:
         #    print('\rpix done: ' + str(100 * pix / num_x / num_y) + '%...', end='')
         for trig in range(num_trig):
             _check_buffer_refill(fp, file_buffer, &buffer_idx, 0x8 * sizeof(char), BUFFER_SIZE)
             memcpy(&num_pulses, file_buffer + buffer_idx + 0x6, sizeof(time))
             buffer_idx += 0x8
-            p_cnt = 0
+            p_cnt_view[pix, :] = 0
             for pulse in range(num_pulses):
                 _check_buffer_refill(fp, file_buffer, &buffer_idx, 0x5 * sizeof(char), BUFFER_SIZE)
                 memcpy(&time, file_buffer + buffer_idx, sizeof(time))
                 memcpy(&width, file_buffer + buffer_idx + 0x2, sizeof(width))
                 memcpy(&intensity, file_buffer + buffer_idx + 0x3, sizeof(intensity))
                 buffer_idx += 0x5
-                if time <= high_range and time >= low_range:
-                    widths[width] += 1
-                    intensities[intensity] += 1
-                    p_cnt += 1
-            if p_cnt != 0:
-                pulse_counts[p_cnt] += 1
+                idx = _minimum_larger_value_in_sorted(low_range, time)
+
+                if idx > 0:
+                    if time <= high_range[idx - 1]:
+                        widths_view[width, idx - 1] += 1
+                        intensities_view[intensity, idx - 1] += 1
+                        p_cnt_view[pix, idx - 1] += 1
+                elif idx == -1:
+                    if time <= high_range[low_range.shape[0] - 1]:
+                        widths_view[width, low_range.shape[0] - 1] += 1
+                        intensities_view[intensity, low_range.shape[0] - 1] += 1
+                        p_cnt_view[pix, low_range.shape[0] - 1] += 1
+
+            for chan in range(p_cnt_view.shape[1]):
+                if p_cnt_view[pix, chan] > 0:
+                    pulse_counts_view[p_cnt_view[pix, chan], chan] += 1
 
     fclose(fp)
     free(file_buffer)
+
+    return (
+        np.asarray(widths, dtype=np.uint64).reshape((256, low_range.shape[0])),
+        np.asarray(intensities, dtype=np.uint64).reshape((USHRT_MAX, low_range.shape[0])),
+        np.asarray(pulse_counts, dtype=np.uint64).reshape((256, low_range.shape[0]))
+    )
+
 
 cdef int _comp(const void *a, const void *b) noexcept nogil:
     cdef int *x = <int *>a
     cdef int *y = <int *>b
     return x[0] - y[0]
 
+
 cdef void _extract_pulse_height_and_positive_pixel(const char* filename, DTYPE_t low_range,
                                                    DTYPE_t high_range,
                                                    MAXINDEX_t* median_pulse_height,
                                                    double* mean_pp):
-
     cdef DTYPE_t num_x, num_y, num_trig, num_frames, desc_len, trig, num_pulses, pulse, time
     cdef DTYPE_t intensity
     cdef SMALL_t pulse_count, width
@@ -369,6 +412,7 @@ cdef MAXINDEX_t _extract_total_counts(const char* filename):
 
     return counts
 
+
 def c_extract_bin(char* filename, DTYPE_t[:] low_range,
                   DTYPE_t[:] high_range, SMALL_t[:] calc_intensity):
     return np.asarray(
@@ -376,24 +420,12 @@ def c_extract_bin(char* filename, DTYPE_t[:] low_range,
     )
 
 
-def c_extract_histograms(char* filename, DTYPE_t low_range,
-                         DTYPE_t high_range):
-    
-    cdef MAXINDEX_t widths[256]
-    cdef MAXINDEX_t intensity[USHRT_MAX]
-    cdef MAXINDEX_t pulse_counts[256]
-
-    memset(widths, 0, 256 * sizeof(MAXINDEX_t))
-    memset(intensity, 0, USHRT_MAX * sizeof(MAXINDEX_t))
-    memset(pulse_counts, 0, 256 * sizeof(MAXINDEX_t))
-
-    _extract_histograms(filename, low_range, high_range, widths, intensity, pulse_counts)
-
-    return (
-        np.asarray(widths),
-        np.asarray(intensity),
-        np.asarray(pulse_counts)
+def c_extract_histograms(char* filename, DTYPE_t[:] low_range,
+                         DTYPE_t[:] high_range):
+    return _extract_histograms(
+        filename, low_range, high_range
     )
+
 
 def c_pulse_height_vs_positive_pixel(char* filename, DTYPE_t low_range, DTYPE_t high_range):
     cdef MAXINDEX_t median_pulse_height = 0
