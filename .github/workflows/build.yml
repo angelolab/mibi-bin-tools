@@ -18,13 +18,13 @@ jobs:
 
     steps:
       - name: Checkout ${{ github.repository }}
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Set up QEMU (For Linux ARM)
         if: runner.os == 'Linux'
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
         with:
           platforms: arm64
 
@@ -46,7 +46,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout ${{ github.repository }}
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Build sdist
         run: pipx run build --sdist
