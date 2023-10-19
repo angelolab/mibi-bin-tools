@@ -31,6 +31,7 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "License :: OSI Approved :: Apache Software License",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
@@ -52,7 +53,7 @@ version_scheme = "release-branch-semver"
 local_scheme = "no-local-version"
 
 [tool.cibuildwheel]
-build = ["cp39-*", "cp310-*", "cp311-*"]
+build = ["cp39-*", "cp310-*", "cp311-*", "cp312-*"]
 skip = [
     "cp36-*",         # Python 3.6
     "cp37-*",         # Python 3.7
