@@ -7,7 +7,8 @@ import pandas as pd
 import skimage.io as io
 import xarray as xr
 
-from mibi_bin_tools import io_utils, type_utils, _extract_bin
+from mibi_bin_tools import type_utils, _extract_bin
+from alpineer import io_utils, image_utils
 
 
 def _mass2tof(masses_arr: np.ndarray, mass_offset: float, mass_gain: float,
@@ -51,17 +52,16 @@ def _set_tof_ranges(fov: Dict[str, Any], higher: np.ndarray, lower: np.ndarray,
     """
     key_names = ('upper_tof_range', 'lower_tof_range')
     mass_ranges = (higher, lower)
-    wrapping_functions = (np.ceil, np.floor)
 
-    for key, masses, wrap in zip(key_names, mass_ranges, wrapping_functions):
-        fov[key] = \
-            wrap(
-                _mass2tof(masses, fov['mass_offset'], fov['mass_gain'], time_res)
-            ).astype(np.uint16)
+    for key, masses in zip(key_names, mass_ranges):
+        # truncate the conversion to ensure consistency
+        fov[key] = _mass2tof(
+            masses, fov['mass_offset'], fov['mass_gain'], time_res
+        ).astype(np.uint16)
 
 
 def _write_out(img_data: np.ndarray, out_dir: str, fov_name: str, targets: List[str],
-               intensities=True) -> None:
+               intensities: Union[bool, List[str]] = False) -> None:
     """Parses extracted data and writes out tifs
 
     Args:
@@ -73,36 +73,35 @@ def _write_out(img_data: np.ndarray, out_dir: str, fov_name: str, targets: List[
             Name of the field of view
         targets (array_like):
             List of target names (i.e channels)
-        intensities (bool):
-            Save intensities
+        intensities (bool | List):
+            Whether or not to write out intensity images.  If a List, specific
+            peaks can be written out, ignoring the rest, which will only have pulse count images.
     """
     out_dirs = [
         os.path.join(out_dir, fov_name),
         os.path.join(out_dir, fov_name, 'intensities'),
-        os.path.join(out_dir, fov_name, 'intensity_times_width')
     ]
     suffixes = [
         '',
         '_intensity',
-        '_int_width'
     ]
     save_dtypes = [
-        np.uint16,
         np.uint32,
         np.uint32,
     ]
+
     for i, (out_dir_i, suffix, save_dtype) in enumerate(zip(out_dirs, suffixes, save_dtypes)):
-        if i > 0 and not intensities:
-            continue
+        # break loop when index is larger than type dimension of img_data
+        if i+1 > img_data.shape[0]:
+            break
         if not os.path.exists(out_dir_i):
             os.makedirs(out_dir_i)
         for j, target in enumerate(targets):
-            io.imsave(
-                os.path.join(out_dir_i, f'{target}{suffix}.tiff'),
-                img_data[i, :, :, j].astype(save_dtype),
-                plugin='tifffile',
-                check_contrast=False
-            )
+            # save all first images regardless of replacing
+            # if not replace (i=1), only save intensity images for specified targets
+            if i == 0 or (target in list(intensities)):
+                fname = os.path.join(out_dir_i, f"{target}{suffix}.tiff")
+                image_utils.save_image(fname=fname, data=img_data[i, :, :, j].astype(save_dtype))
 
 
 def _find_bin_files(data_dir: str,
@@ -281,10 +280,48 @@ def _parse_intensities(fov: Dict[str, Any], intensities: Union[bool, List[str]])
         fov['calc_intensity'] = [False, ] * len(fov['targets'])
 
 
+def condense_img_data(img_data, targets, intensities, replace):
+    """Changes image data from separate pulse and intensity data into one column if replace=True.
+    Args:
+        img_data (np.array):
+            Contains the image data with all pulse and intensity information.
+        targets (list):
+            List of targets.
+        intensities (bool | List):
+            Whether or not to extract intensity images.  If a List, specific
+            peaks can be extracted, ignoring the rest, which will only have pulse count images
+            extracted.
+        replace (bool):
+            Whether to replace pulse images with intensity images.
+
+    Return:
+        altered img_data according to args
+
+    """
+    # extracting intensity and replacing
+    if type_utils.any_true(intensities) and replace:
+        for j, target in enumerate(targets):
+            # replace only specified targets
+            if target in intensities:
+                img_data[0, :, :, j] = img_data[1, :, :, j]
+        img_data = img_data[[0], :, :, :]
+
+    # not extracting intensity
+    elif not type_utils.any_true(intensities):
+        img_data = img_data[[0], :, :, :]
+
+    # extracting intensity but not replacing
+    else:
+        img_data = img_data[[0, 1], :, :, :]
+
+    return img_data
+
+
 def extract_bin_files(data_dir: str, out_dir: Union[str, None],
                       include_fovs: Union[List[str], None] = None,
                       panel: Union[Tuple[float, float], pd.DataFrame] = (-0.3, 0.0),
-                      intensities: Union[bool, List[str]] = False, time_res: float = 500e-6):
+                      intensities: Union[bool, List[str]] = False, replace=True,
+                      time_res: float = 500e-6):
     """Converts MibiScope bin files to pulse count, intensity, and intensity * width tiff images
 
     Args:
@@ -299,15 +336,18 @@ def extract_bin_files(data_dir: str, out_dir: Union[str, None],
             If a pd.DataFrame, specific peaks with custom integration ranges.  Column names must be
             'Mass' and 'Target' with integration ranges specified via 'Start' and 'Stop' columns.
         intensities (bool | List):
-            Whether or not to extract intensity and intensity * width images.  If a List, specific
+            Whether or not to extract intensity images.  If a List, specific
             peaks can be extracted, ignoring the rest, which will only have pulse count images
             extracted.
+        replace (bool):
+            Whether to replace pulse images with intensity images.
         time_res (float):
             Time resolution for scaling parabolic transformation
     Returns:
         None | np.ndarray:
             image data if no out_dir is provided, otherwise no return
     """
+
     fov_files = _find_bin_files(data_dir, include_fovs)
 
     for fov in fov_files.values():
@@ -323,21 +363,33 @@ def extract_bin_files(data_dir: str, out_dir: Union[str, None],
             bytes(bf, 'utf-8'), fov['lower_tof_range'],
             fov['upper_tof_range'], np.array(fov['calc_intensity'], dtype=np.uint8)
         )
+
+        # convert intensities=True to list of all targets
+        if type_utils.any_true(intensities):
+            if type(intensities) is not list:
+                intensities = list(fov['targets'])
+
+        img_data = condense_img_data(img_data, list(fov['targets']), intensities, replace)
+
         if out_dir is not None:
             _write_out(
                 img_data,
                 out_dir,
                 fov['bin'][:-4],
                 fov['targets'],
-                type_utils.any_true(intensities)
+                intensities
             )
         else:
+            if replace or not type_utils.any_true(intensities):
+                type_list = ['pulse']
+            else:
+                type_list = ['pulse', 'intensities']
             image_data.append(
                 xr.DataArray(
                     data=img_data[np.newaxis, :],
                     coords=[
                         [fov['bin'].split('.')[0]],
-                        ['pulse', 'intensity', 'area'],
+                        type_list,
                         np.arange(img_data.shape[1]),
                         np.arange(img_data.shape[2]),
                         list(fov['targets']),
@@ -349,13 +401,11 @@ def extract_bin_files(data_dir: str, out_dir: Union[str, None],
     if out_dir is None:
         image_data = xr.concat(image_data, dim='fov')
 
-        if not intensities:
-            image_data = image_data.loc[:, ['pulse'], :, :, :]
-
         return image_data
 
 
-def get_histograms_per_tof(data_dir: str, fov: str, channel: str, mass_range=(-0.3, 0.0),
+def get_histograms_per_tof(data_dir: str, fov: str, channels: List[str] = None,
+                           panel: Union[Tuple[float, float], pd.DataFrame] = (-0.3, 0.0),
                            time_res: float = 500e-6):
     """Generates histograms of pulse widths, pulse counts, and pulse intensities found within the
     given mass range
@@ -365,26 +415,46 @@ def get_histograms_per_tof(data_dir: str, fov: str, channel: str, mass_range=(-0
             Directory containing bin files as well as accompanying json metadata files
         fov (str):
             Fov to generate histogram for
-        channel (str):
-            Channel to check widths for
-        mass_range (tuple):
-            Integration range
+        channels (str):
+            Channels to check widths for, default checks all channels
+        panel (tuple | pd.DataFrame):
+            If a tuple, global integration range over all antibodies within json metadata.
+            If a pd.DataFrame, specific peaks with custom integration ranges.  Column names must be
+            'Mass' and 'Target' with integration ranges specified via 'Start' and 'Stop' columns.
         time_res (float):
             Time resolution for scaling parabolic transformation
+
+    Returns:
+        tuple (dict):
+            Tuple of dicts containing widths, intensities, and pulse info per channel
     """
     fov = _find_bin_files(data_dir, [fov])[fov]
 
-    _fill_fov_metadata(data_dir, fov, mass_range, False, time_res, [channel])
+    _fill_fov_metadata(data_dir, fov, panel, False, time_res, channels)
 
     local_bin_file = os.path.join(data_dir, fov['bin'])
 
-    widths, intensities, pulses = _extract_bin.c_extract_histograms(bytes(local_bin_file, 'utf-8'),
-                                                                    fov['lower_tof_range'][0],
-                                                                    fov['upper_tof_range'][0])
+    widths, intensities, pulses = _extract_bin.c_extract_histograms(
+        bytes(local_bin_file, 'utf-8'),
+        fov['lower_tof_range'],
+        fov['upper_tof_range']
+    )
+
+    chan_list = fov["targets"].values
+    widths = {
+        chan: widths_col for chan, widths_col in zip(chan_list, widths.T)
+    }
+    intensities = {
+        chan: intensities_col for chan, intensities_col in zip(chan_list, intensities.T)
+    }
+    pulses = {
+        chan: pulses_col for chan, pulses_col in zip(chan_list, pulses.T)
+    }
+
     return widths, intensities, pulses
 
 
-def get_median_pulse_height(data_dir: str, fov: str, channel: str,
+def get_median_pulse_height(data_dir: str, fov: str, channels: List[str] = None,
                             panel: Union[Tuple[float, float], pd.DataFrame] = (-0.3, 0.0),
                             time_res: float = 500e-6):
     """Retrieves median pulse intensity and mean pulse count for a given channel
@@ -401,20 +471,30 @@ def get_median_pulse_height(data_dir: str, fov: str, channel: str,
         time_res (float):
             Time resolution for scaling parabolic transformation
 
+    Returns:
+        dict:
+            dictionary of median height values per channel
     """
 
     fov = _find_bin_files(data_dir, [fov])[fov]
-    _fill_fov_metadata(data_dir, fov, panel, False, time_res, [channel])
+    _fill_fov_metadata(data_dir, fov, panel, False, time_res, channels)
 
     local_bin_file = os.path.join(data_dir, fov['bin'])
 
     _, intensities, _ = \
-        _extract_bin.c_extract_histograms(bytes(local_bin_file, 'utf-8'),
-                                          fov['lower_tof_range'][0],
-                                          fov['upper_tof_range'][0])
+        _extract_bin.c_extract_histograms(
+            bytes(local_bin_file, 'utf-8'),
+            fov['lower_tof_range'],
+            fov['upper_tof_range']
+        )
 
-    int_bin = np.cumsum(intensities) / intensities.sum()
-    median_height = (np.abs(int_bin - 0.5)).argmin()
+    int_bin = np.cumsum(intensities, axis=0) / intensities.sum(axis=0)
+    median_height = (np.abs(int_bin - 0.5)).argmin(axis=0)
+
+    chan_list = fov["targets"].values
+    median_height = {
+        chan: mh for chan, mh in zip(chan_list, median_height)
+    }
 
     return median_height
 
