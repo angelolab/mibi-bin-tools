@@ -413,7 +413,7 @@ cdef MAXINDEX_t _extract_total_counts(const char* filename):
     return counts
 
 
-cdef void _extract_total_spectra(const char* filename, MAXINDEX_t* total_spectra):
+cdef _extract_total_spectra(const char* filename):
     """Extract total spectra from bin file
 
     Args:
@@ -444,6 +444,15 @@ cdef void _extract_total_spectra(const char* filename, MAXINDEX_t* total_spectra
     fseek(fp, 0x2, SEEK_CUR)
     fread(&desc_len, sizeof(DTYPE_t), 1, fp)
 
+    spectra_by_pixel = \
+        cvarray(
+            shape=(<MAXINDEX_t>(num_x) * <MAXINDEX_t>(num_y), USHRT_MAX),
+            itemsize=sizeof(MAXINDEX_t),
+            format='Q'
+        )
+    cdef MAXINDEX_t[:, :] spectra_by_pixel_view = spectra_by_pixel
+    spectra_by_pixel_view[:, :] = 0
+
     data_start = \
         <MAXINDEX_t>(num_x) * <MAXINDEX_t>(num_y) * <MAXINDEX_t>(num_frames) * 8 + desc_len + 0x12
 
@@ -461,10 +470,14 @@ cdef void _extract_total_spectra(const char* filename, MAXINDEX_t* total_spectra
                 memcpy(&intensity, file_buffer + buffer_idx + 0x3, sizeof(intensity))
                 buffer_idx += 0x5
 
-                total_spectra[time] += 1
+                spectra_by_pixel_view[pix, time] += 1
 
     fclose(fp)
     free(file_buffer)
+
+    return np.asarray(spectra_by_pixel, dtype=np.uint64).reshape(
+        (<MAXINDEX_t>num_x * <MAXINDEX_t>num_y, USHRT_MAX)
+    )
 
 
 def c_extract_bin(char* filename, DTYPE_t[:] low_range,
@@ -493,9 +506,4 @@ def c_total_counts(char* filename):
     return int(counts)
 
 def c_total_spectra(char* filename):
-    cdef MAXINDEX_t total_spectra[USHRT_MAX]
-    memset(total_spectra, 0, USHRT_MAX * sizeof(MAXINDEX_t))
-
-    _extract_total_spectra(filename, total_spectra)
-
-    return np.asarray(total_spectra)
+    return _extract_total_spectra(filename)
