@@ -413,16 +413,18 @@ cdef MAXINDEX_t _extract_total_counts(const char* filename):
     return counts
 
 
-cdef _extract_total_spectra(const char* filename):
+cdef _extract_total_spectra(const char* filename, DTYPE_t low_range, DTYPE_t high_range):
     """Extract total spectra from bin file
 
     Args:
         filename (const char*):
             Name of bin file to extract
+        low_range (np.uint16_t):
+            The lowest time interval to consider
+        high_range (np.uint16_t):
+            The highest time interval to consider
     """
     cdef DTYPE_t num_x, num_y, num_trig, num_frames, desc_len, trig, num_pulses, pulse, time
-    cdef DTYPE_t intensity
-    cdef SMALL_t width
     cdef MAXINDEX_t data_start, pix 
 
     # 10MB buffer
@@ -446,11 +448,12 @@ cdef _extract_total_spectra(const char* filename):
 
     spectra_by_pixel = \
         cvarray(
-            shape=(<MAXINDEX_t>(num_x) * <MAXINDEX_t>(num_y), USHRT_MAX),
-            itemsize=sizeof(MAXINDEX_t),
-            format='Q'
+            shape=(<MAXINDEX_t>(num_x) * <MAXINDEX_t>(num_y),
+                   <MAXINDEX_t>(high_range) - <MAXINDEX_t>(low_range) + 1),
+            itemsize=sizeof(DTYPE_t),
+            format='H'
         )
-    cdef MAXINDEX_t[:, :] spectra_by_pixel_view = spectra_by_pixel
+    cdef DTYPE_t[:, :] spectra_by_pixel_view = spectra_by_pixel
     spectra_by_pixel_view[:, :] = 0
 
     data_start = \
@@ -466,17 +469,16 @@ cdef _extract_total_spectra(const char* filename):
             for pulse in range(num_pulses):
                 _check_buffer_refill(fp, file_buffer, &buffer_idx, 0x5 * sizeof(char), BUFFER_SIZE)
                 memcpy(&time, file_buffer + buffer_idx, sizeof(time))
-                memcpy(&width, file_buffer + buffer_idx + 0x2, sizeof(width))
-                memcpy(&intensity, file_buffer + buffer_idx + 0x3, sizeof(intensity))
                 buffer_idx += 0x5
 
-                spectra_by_pixel_view[pix, time] += 1
+                if time >= low_range and time <= high_range:
+                    spectra_by_pixel_view[pix, <MAXINDEX_t>(time) - <MAXINDEX_t>(low_range)] += 1
 
     fclose(fp)
     free(file_buffer)
 
-    return np.asarray(spectra_by_pixel, dtype=np.uint64).reshape(
-        (<MAXINDEX_t>num_x * <MAXINDEX_t>num_y, USHRT_MAX)
+    return np.asarray(spectra_by_pixel, dtype=np.uint16).reshape(
+        (<MAXINDEX_t>num_x, <MAXINDEX_t>num_y, <MAXINDEX_t>high_range - <MAXINDEX_t>low_range + 1)
     )
 
 
@@ -505,5 +507,6 @@ def c_total_counts(char* filename):
     counts = _extract_total_counts(filename)
     return int(counts)
 
-def c_total_spectra(char* filename):
-    return _extract_total_spectra(filename)
+def c_total_spectra(char* filename, DTYPE_t low_range, DTYPE_t high_range):
+    print("Running spectra extraction")
+    return _extract_total_spectra(filename, low_range, high_range)

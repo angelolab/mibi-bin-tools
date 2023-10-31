@@ -524,7 +524,7 @@ def get_total_counts(data_dir: str, include_fovs: Union[List[str], None] = None)
 
 
 def get_total_spectra(data_dir: str, include_fovs: Union[List[str], None] = None,
-                      panel_df: pd.DataFrame = None):
+                      panel_df: pd.DataFrame = None, range_pad=0.5):
     """Retrieves total spectra for each field of view
 
     Args:
@@ -534,21 +534,45 @@ def get_total_spectra(data_dir: str, include_fovs: Union[List[str], None] = None
             List of fovs to include. Includes all if None.
         panel_df (pd.DataFrame | None):
             If not None, get default callibration information
+        range_offset (float):
+            Mass padding below the lowest and highest masses to consider when binning.
+            The time-of-flight array go from TOF of (lowest mass - 0.5) to (highest_mass + 0.5).
 
     Returns:
-        dict:
-            dictionary of total spectra, with fov names as keys
+        tuple (dict, dict, list):
+            dict of total spectra and the corresponding low and high ranges, with fov names as keys
     """
+    if range_pad < 0:
+        raise ValueError("range_pad must be >= 0")
 
     fov_files = _find_bin_files(data_dir, include_fovs)
-
     if panel_df is not None:
         for fov in fov_files.values():
             _fill_fov_metadata(data_dir, fov, panel_df, False, 500e-6)
 
-    bin_files = \
-        [(name, os.path.join(data_dir, fov['bin'])) for name, fov in fov_files.items()]
+    bin_files = list(fov_files.items())
 
-    outs = {name: _extract_bin.c_total_spectra(bytes(bf, 'utf-8')) for name, bf in bin_files}
+    # TODO: this assumes the panel_df is sorted
+    lowest_mass = panel_df.loc[0, "Stop"] - range_pad
+    highest_mass = panel_df.loc[panel_df.shape[0] - 1, "Stop"] + range_pad
 
-    return outs, fov_files
+    # store the spectra, as well as the time intervals for each FOV
+    spectra = {}
+    tof_interval = {}
+    for name, fov in bin_files:
+        # compute the low and high boundaries, this will differ per FOV
+        mass_offset = fov["mass_offset"]
+        mass_gain = fov["mass_gain"]
+        tof_boundaries = _mass2tof(
+            np.array([lowest_mass, highest_mass]), mass_offset, mass_gain, 500e-6
+        ).astype(np.uint16)
+
+        # set the boundaries
+        tof_interval[name] = tof_boundaries
+
+        # extract the spectra on an individual basis per channel
+        spectra[name] = _extract_bin.c_total_spectra(
+            bytes(os.path.join(data_dir, fov["bin"]), "utf-8"), tof_boundaries[0], tof_boundaries[1]
+        )
+
+    return spectra, tof_interval, fov_files
