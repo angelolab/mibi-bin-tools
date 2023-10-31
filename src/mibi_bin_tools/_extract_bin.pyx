@@ -450,10 +450,10 @@ cdef _extract_total_spectra(const char* filename, DTYPE_t low_range, DTYPE_t hig
         cvarray(
             shape=(<MAXINDEX_t>(num_x) * <MAXINDEX_t>(num_y),
                    <MAXINDEX_t>(high_range) - <MAXINDEX_t>(low_range) + 1),
-            itemsize=sizeof(DTYPE_t),
-            format='H'
+            itemsize=sizeof(SMALL_t),
+            format='B'
         )
-    cdef DTYPE_t[:, :] spectra_by_pixel_view = spectra_by_pixel
+    cdef SMALL_t[:, :] spectra_by_pixel_view = spectra_by_pixel
     spectra_by_pixel_view[:, :] = 0
 
     data_start = \
@@ -477,7 +477,7 @@ cdef _extract_total_spectra(const char* filename, DTYPE_t low_range, DTYPE_t hig
     fclose(fp)
     free(file_buffer)
 
-    return np.asarray(spectra_by_pixel, dtype=np.uint16).reshape(
+    return np.asarray(spectra_by_pixel, dtype=np.uint8).reshape(
         (<MAXINDEX_t>num_x, <MAXINDEX_t>num_y, <MAXINDEX_t>high_range - <MAXINDEX_t>low_range + 1)
     )
 
@@ -508,5 +508,4 @@ def c_total_counts(char* filename):
     return int(counts)
 
 def c_total_spectra(char* filename, DTYPE_t low_range, DTYPE_t high_range):
-    print("Running spectra extraction")
     return _extract_total_spectra(filename, low_range, high_range)
