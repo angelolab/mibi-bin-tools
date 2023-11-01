@@ -524,7 +524,7 @@ def get_total_counts(data_dir: str, include_fovs: Union[List[str], None] = None)
 
 
 def get_total_spectra(data_dir: str, include_fovs: Union[List[str], None] = None,
-                      panel_df: pd.DataFrame = None, range_pad=0.5):
+                      panel_df: pd.DataFrame = None, range_pad: float =0.5):
     """Retrieves total spectra for each field of view
 
     Args:
