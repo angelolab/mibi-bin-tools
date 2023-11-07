@@ -32,6 +32,27 @@ def _mass2tof(masses_arr: np.ndarray, mass_offset: float, mass_gain: float,
     return (mass_gain * np.sqrt(masses_arr) + mass_offset) / time_res
 
 
+def _tof2mass(tof_arr: np.ndarray, mass_offset: float, mass_gain: float,
+              time_res: float) -> np.ndarray:
+    """Convert array of time of flight values to equivalent m/z
+
+    Args:
+        tof_arr (array_like):
+            Array of time of flight values
+        mass_offset (float):
+            Mass offset for parabolic transformation
+        mass_gain (float):
+            Mass gain for parabolic transformation
+        time_res (float):
+            Time resolution for scaling parabolic transformation
+
+    Returns:
+        array_like:
+            Array of m/z values; indicies paried to `tof_range`
+    """
+    return (((time_res * tof_arr) - mass_offset) / mass_gain) ** 2
+
+
 def _set_tof_ranges(fov: Dict[str, Any], higher: np.ndarray, lower: np.ndarray,
                     time_res: float) -> None:
     """Converts and stores provided mass ranges as time of flight ranges within fov metadata
@@ -574,5 +595,10 @@ def get_total_spectra(data_dir: str, include_fovs: Union[List[str], None] = None
         spectra[name] = _extract_bin.c_total_spectra(
             bytes(os.path.join(data_dir, fov["bin"]), "utf-8"), tof_boundaries[0], tof_boundaries[1]
         )
+
+        # generate equivalent m/z values
+        tof_arr = np.arange(tof_boundaries[0], tof_boundaries[1] + 1)
+        mass_arr = _tof2mass(tof_arr, mass_offset, mass_gain, 500e-6)
+        fov["mass_spectra_points"] = mass_arr
 
     return spectra, tof_interval, fov_files
