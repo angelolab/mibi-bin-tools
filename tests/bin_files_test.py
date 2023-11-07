@@ -343,4 +343,23 @@ def test_get_total_counts(test_dir, fov):
         bytes(bf, 'utf-8'), np.array([0], np.uint16),
         np.array([-1], dtype=np.uint16), np.array([False], dtype=np.uint8)
     )
-    assert (total_counts['fov-1-scan-1'] == np.sum(total_ion_image[0, :, :, :]))
+    assert total_counts['fov-1-scan-1'] == np.sum(total_ion_image[0, :, :, :])
+
+
+@parametrize_with_cases('test_dir, fov', cases=FovMetadataTestFiles)
+@parametrize_with_cases('panel', cases=FovMetadataTestPanels, has_tag='specified')
+def test_get_total_spectra(test_dir, fov, panel):
+    # ensure range_pad is positive
+    with pytest.raises(ValueError):
+        bin_files.get_total_spectra(
+            test_dir,
+            [fov['json'].split('.')[0]],
+            panel,
+            range_pad=-0.1
+        )
+
+    bin_files.get_total_spectra(
+        test_dir,
+        [fov['json'].split('.')[0]],
+        panel
+    )
