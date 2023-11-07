@@ -566,12 +566,12 @@ def get_total_spectra(data_dir: str, include_fovs: Union[List[str], None] = None
     if range_pad < 0:
         raise ValueError("range_pad must be >= 0")
 
-    fov_files = _find_bin_files(data_dir, include_fovs)
+    fov_metadata = _find_bin_files(data_dir, include_fovs)
     if panel_df is not None:
-        for fov in fov_files.values():
-            _fill_fov_metadata(data_dir, fov, panel_df, False, 500e-6)
+        for fov_info in fov_metadata.values():
+            _fill_fov_metadata(data_dir, fov_info, panel_df, False, 500e-6)
 
-    bin_files = list(fov_files.items())
+    bin_metadata = list(fov_metadata.items())
 
     # TODO: this assumes the panel_df is sorted
     lowest_mass = panel_df.loc[0, "Stop"] - range_pad
@@ -580,25 +580,27 @@ def get_total_spectra(data_dir: str, include_fovs: Union[List[str], None] = None
     # store the spectra, as well as the time intervals for each FOV
     spectra = {}
     tof_interval = {}
-    for name, fov in bin_files:
+    for fov_name, fov_info in bin_metadata:
         # compute the low and high boundaries, this will differ per FOV
-        mass_offset = fov["mass_offset"]
-        mass_gain = fov["mass_gain"]
+        mass_offset = fov_info["mass_offset"]
+        mass_gain = fov_info["mass_gain"]
         tof_boundaries = _mass2tof(
             np.array([lowest_mass, highest_mass]), mass_offset, mass_gain, 500e-6
         ).astype(np.uint16)
 
         # set the boundaries
-        tof_interval[name] = tof_boundaries
+        tof_interval[fov_name] = tof_boundaries
 
         # extract the spectra on an individual basis per channel
-        spectra[name] = _extract_bin.c_total_spectra(
-            bytes(os.path.join(data_dir, fov["bin"]), "utf-8"), tof_boundaries[0], tof_boundaries[1]
+        spectra[fov_name] = _extract_bin.c_total_spectra(
+            bytes(os.path.join(data_dir, fov_info["bin"]), "utf-8"),
+            tof_boundaries[0],
+            tof_boundaries[1]
         )
 
         # generate equivalent m/z values
         tof_arr = np.arange(tof_boundaries[0], tof_boundaries[1] + 1)
         mass_arr = _tof2mass(tof_arr, mass_offset, mass_gain, 500e-6)
-        fov["mass_spectra_points"] = mass_arr
+        fov_info["mass_spectra_points"] = mass_arr
 
-    return spectra, tof_interval, fov_files
+    return spectra, tof_interval, fov_metadata

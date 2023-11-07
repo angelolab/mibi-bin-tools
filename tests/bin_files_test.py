@@ -349,6 +349,15 @@ def test_get_total_counts(test_dir, fov):
 @parametrize_with_cases('test_dir, fov', cases=FovMetadataTestFiles)
 @parametrize_with_cases('panel', cases=FovMetadataTestPanels, has_tag='specified')
 def test_get_total_spectra(test_dir, fov, panel):
+    # ensure range_pad is positive
+    with pytest.raises(ValueError):
+        bin_files.get_total_spectra(
+            test_dir,
+            [fov['json'].split('.')[0]],
+            panel,
+            range_pad=-0.1
+        )
+
     bin_files.get_total_spectra(
         test_dir,
         [fov['json'].split('.')[0]],
