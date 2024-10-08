@@ -555,7 +555,7 @@ def get_total_spectra(data_dir: str, include_fovs: Union[List[str], None] = None
             List of fovs to include. Includes all if None.
         panel_df (pd.DataFrame | None):
             If not None, get default callibration information
-        range_offset (float):
+        range_pad (float):
             Mass padding below the lowest and highest masses to consider when binning.
             The time-of-flight array go from TOF of (lowest mass - 0.5) to (highest_mass + 0.5).
 
