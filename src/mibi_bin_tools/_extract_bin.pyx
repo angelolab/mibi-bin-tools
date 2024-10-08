@@ -413,6 +413,75 @@ cdef MAXINDEX_t _extract_total_counts(const char* filename):
     return counts
 
 
+cdef _extract_total_spectra(const char* filename, DTYPE_t low_range, DTYPE_t high_range):
+    """Extract total spectra from bin file
+
+    Args:
+        filename (const char*):
+            Name of bin file to extract
+        low_range (np.uint16_t):
+            The lowest time interval to consider
+        high_range (np.uint16_t):
+            The highest time interval to consider
+    """
+    cdef DTYPE_t num_x, num_y, num_trig, num_frames, desc_len, trig, num_pulses, pulse, time
+    cdef MAXINDEX_t data_start, pix 
+
+    # 10MB buffer
+    cdef MAXINDEX_t BUFFER_SIZE = 10 * 1024 * 1024
+    cdef char* file_buffer = <char*> malloc(BUFFER_SIZE * sizeof(char))
+    cdef MAXINDEX_t buffer_idx = 0
+
+    # open file
+    cdef FILE* fp
+    fp = fopen(filename, "rb")
+
+    # note, if cython has packed structs, this would be easier
+    # or even macros tbh
+    fseek(fp, 0x6, SEEK_SET)
+    fread(&num_x, sizeof(DTYPE_t), 1, fp)
+    fread(&num_y, sizeof(DTYPE_t), 1, fp)
+    fread(&num_trig, sizeof(DTYPE_t), 1, fp)
+    fread(&num_frames, sizeof(DTYPE_t), 1, fp)
+    fseek(fp, 0x2, SEEK_CUR)
+    fread(&desc_len, sizeof(DTYPE_t), 1, fp)
+
+    spectra_by_pixel = \
+        cvarray(
+            shape=(<MAXINDEX_t>(num_x) * <MAXINDEX_t>(num_y),
+                   <MAXINDEX_t>(high_range) - <MAXINDEX_t>(low_range) + 1),
+            itemsize=sizeof(SMALL_t),
+            format='B'
+        )
+    cdef SMALL_t[:, :] spectra_by_pixel_view = spectra_by_pixel
+    spectra_by_pixel_view[:, :] = 0
+
+    data_start = \
+        <MAXINDEX_t>(num_x) * <MAXINDEX_t>(num_y) * <MAXINDEX_t>(num_frames) * 8 + desc_len + 0x12
+
+    fseek(fp, data_start, SEEK_SET)
+    fread(file_buffer, sizeof(char), BUFFER_SIZE, fp)
+    for pix in range(<MAXINDEX_t>(num_x) * <MAXINDEX_t>(num_y)):
+        for trig in range(num_trig):
+            _check_buffer_refill(fp, file_buffer, &buffer_idx, 0x8 * sizeof(char), BUFFER_SIZE)
+            memcpy(&num_pulses, file_buffer + buffer_idx + 0x6, sizeof(time))
+            buffer_idx += 0x8
+            for pulse in range(num_pulses):
+                _check_buffer_refill(fp, file_buffer, &buffer_idx, 0x5 * sizeof(char), BUFFER_SIZE)
+                memcpy(&time, file_buffer + buffer_idx, sizeof(time))
+                buffer_idx += 0x5
+
+                if time >= low_range and time <= high_range:
+                    spectra_by_pixel_view[pix, <MAXINDEX_t>(time) - <MAXINDEX_t>(low_range)] += 1
+
+    fclose(fp)
+    free(file_buffer)
+
+    return np.asarray(spectra_by_pixel, dtype=np.uint8).reshape(
+        (<MAXINDEX_t>num_x, <MAXINDEX_t>num_y, <MAXINDEX_t>high_range - <MAXINDEX_t>low_range + 1)
+    )
+
+
 def c_extract_bin(char* filename, DTYPE_t[:] low_range,
                   DTYPE_t[:] high_range, SMALL_t[:] calc_intensity):
     return np.asarray(
@@ -437,3 +506,6 @@ def c_pulse_height_vs_positive_pixel(char* filename, DTYPE_t low_range, DTYPE_t 
 def c_total_counts(char* filename):
     counts = _extract_total_counts(filename)
     return int(counts)
+
+def c_total_spectra(char* filename, DTYPE_t low_range, DTYPE_t high_range):
+    return _extract_total_spectra(filename, low_range, high_range)
