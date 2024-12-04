@@ -32,6 +32,27 @@ def _mass2tof(masses_arr: np.ndarray, mass_offset: float, mass_gain: float,
     return (mass_gain * np.sqrt(masses_arr) + mass_offset) / time_res
 
 
+def _tof2mass(tof_arr: np.ndarray, mass_offset: float, mass_gain: float,
+              time_res: float) -> np.ndarray:
+    """Convert array of time of flight values to equivalent m/z
+
+    Args:
+        tof_arr (array_like):
+            Array of time of flight values
+        mass_offset (float):
+            Mass offset for parabolic transformation
+        mass_gain (float):
+            Mass gain for parabolic transformation
+        time_res (float):
+            Time resolution for scaling parabolic transformation
+
+    Returns:
+        array_like:
+            Array of m/z values; indicies paried to `tof_range`
+    """
+    return (((time_res * tof_arr) - mass_offset) / mass_gain) ** 2
+
+
 def _set_tof_ranges(fov: Dict[str, Any], higher: np.ndarray, lower: np.ndarray,
                     time_res: float) -> None:
     """Converts and stores provided mass ranges as time of flight ranges within fov metadata
@@ -521,3 +542,65 @@ def get_total_counts(data_dir: str, include_fovs: Union[List[str], None] = None)
     outs = {name: _extract_bin.c_total_counts(bytes(bf, 'utf-8')) for name, bf in bin_files}
 
     return outs
+
+
+def get_total_spectra(data_dir: str, include_fovs: Union[List[str], None] = None,
+                      panel_df: pd.DataFrame = None, range_pad: float = 0.5):
+    """Retrieves total spectra for each field of view
+
+    Args:
+        data_dir (str | PathLike):
+            Directory containing bin files as well as accompanying json metadata files
+        include_fovs (List | None):
+            List of fovs to include. Includes all if None.
+        panel_df (pd.DataFrame | None):
+            If not None, get default callibration information
+        range_pad (float):
+            Mass padding below the lowest and highest masses to consider when binning.
+            The time-of-flight array go from TOF of (lowest mass - 0.5) to (highest_mass + 0.5).
+
+    Returns:
+        tuple (dict, dict, list):
+            dict of total spectra and the corresponding low and high ranges, with fov names as keys
+    """
+    if range_pad < 0:
+        raise ValueError("range_pad must be >= 0")
+
+    fov_metadata = _find_bin_files(data_dir, include_fovs)
+    if panel_df is not None:
+        for fov_info in fov_metadata.values():
+            _fill_fov_metadata(data_dir, fov_info, panel_df, False, 500e-6)
+
+    bin_metadata = list(fov_metadata.items())
+
+    # TODO: this assumes the panel_df is sorted
+    lowest_mass = panel_df.loc[0, "Stop"] - range_pad
+    highest_mass = panel_df.loc[panel_df.shape[0] - 1, "Stop"] + range_pad
+
+    # store the spectra, as well as the time intervals for each FOV
+    spectra = {}
+    tof_interval = {}
+    for fov_name, fov_info in bin_metadata:
+        # compute the low and high boundaries, this will differ per FOV
+        mass_offset = fov_info["mass_offset"]
+        mass_gain = fov_info["mass_gain"]
+        tof_boundaries = _mass2tof(
+            np.array([lowest_mass, highest_mass]), mass_offset, mass_gain, 500e-6
+        ).astype(np.uint16)
+
+        # set the boundaries
+        tof_interval[fov_name] = tof_boundaries
+
+        # extract the spectra on an individual basis per channel
+        spectra[fov_name] = _extract_bin.c_total_spectra(
+            bytes(os.path.join(data_dir, fov_info["bin"]), "utf-8"),
+            tof_boundaries[0],
+            tof_boundaries[1]
+        )
+
+        # generate equivalent m/z values
+        tof_arr = np.arange(tof_boundaries[0], tof_boundaries[1] + 1)
+        mass_arr = _tof2mass(tof_arr, mass_offset, mass_gain, 500e-6)
+        fov_info["mass_spectra_points"] = mass_arr
+
+    return spectra, tof_interval, fov_metadata
