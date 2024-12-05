@@ -83,8 +83,7 @@ test-skip = [
 manylinux-x86_64-image = "manylinux_2_28"
 manylinux-aarch64-image = "manylinux_2_28"
 
-
-# On an Linux Intel runner with qemu installed, build Intel and aarch64 (arm) wheels
+# On a Linux Intel runner with qemu installed, build Intel and aarch64 (arm) wheels
 [tool.cibuildwheel.linux]
 archs = ["x86_64", "aarch64"]
 repair-wheel-command = "auditwheel repair -w {dest_dir} {wheel}"
