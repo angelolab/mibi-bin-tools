@@ -46,7 +46,7 @@ jobs:
           fetch-depth: 0
 
       - name: Download Coverage Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         # if `name` is not specified, all artifacts are downloaded.
 
       - name: Upload Coverage to Coveralls
