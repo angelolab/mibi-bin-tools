@@ -36,7 +36,7 @@ jobs:
           config-file: "{package}/pyproject.toml"
 
       - name: Store Wheel Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: distributions
           path: wheelhouse/*.whl
@@ -55,7 +55,7 @@ jobs:
         run: pipx run twine check dist/*
 
       - name: Store sdist Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: distributions
           path: dist/*.tar.gz
