@@ -341,7 +341,7 @@ def test_get_total_counts(test_dir, fov):
     bf = os.path.join(test_dir, fov['bin'])
     total_ion_image = _extract_bin.c_extract_bin(
         bytes(bf, 'utf-8'), np.array([0], np.uint16),
-        np.array([-1], dtype=np.uint16), np.array([False], dtype=np.uint8)
+        np.array([np.iinfo(np.uint16).max], dtype=np.uint16), np.array([False], dtype=np.uint8)
     )
     assert total_counts['fov-1-scan-1'] == np.sum(total_ion_image[0, :, :, :])
 

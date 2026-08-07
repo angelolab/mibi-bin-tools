@@ -15,7 +15,7 @@ dependencies = [
     "numpy>=2.1",
     "pandas>=2",
     "scikit-image>=0.19",
-    "alpineer>=0.1.9",
+    "alpineer>=0.2.0",
     "xarray>=2023",
 ]
 name = "mibi-bin-tools"
@@ -39,10 +39,12 @@ dynamic = ["version"]
 urls = { repository = "https://github.com/angelolab/mibi-bin-tools" }
 
 [project.optional-dependencies]
+# TODO: open issue in https://github.com/smarie/python-pytest-cases/issues/385
+# Bump pytest after open fix is merged
 test = [
     "coveralls[toml]",
-    "pytest",
-    "pytest-cases",
+    "pytest<9.1",
+    "pytest-cases>=3.10.0",
     "pytest-cov",
     "pytest-mock",
     "pytest-pycodestyle",
