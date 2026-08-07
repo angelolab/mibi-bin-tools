@@ -15,7 +15,7 @@ dependencies = [
     "numpy>=2.1",
     "pandas>=2",
     "scikit-image>=0.19",
-    "alpineer>=0.1.9",
+    "alpineer>=0.2.0",
     "xarray>=2023",
 ]
 name = "mibi-bin-tools"
